@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCADE HUB</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+:root {
+  --bg: #07080f;
+  --card-bg: #0d1022;
+  --border: rgba(255,255,255,0.07);
+  --text: #ccd6f6;
+  --muted: #7a8ab0;
+  --bubble-c: #4488ff;
+  --dragon-c: #ff6600;
+  --horror-c: #cc0033;
+  --glow-size: 80px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── starfield ── */
+#stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+
+/* ── header ── */
+header {
+  position: relative; z-index: 10;
+  text-align: center;
+  padding: 64px 24px 32px;
+}
+.logo-label {
+  display: inline-block;
+  font-family: 'Orbitron', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+header h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #a0c4ff 0%, #ffffff 40%, #ffb347 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  line-height: 1.1;
+}
+header p {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.header-line {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, transparent, #fff4, transparent);
+  margin: 24px auto 0;
+}
+
+/* ── grid ── */
+main {
+  position: relative; z-index: 10;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 24px 80px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+}
+
+/* ── game card ── */
+.card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-8px) scale(1.01);
+}
+
+/* per-game accent */
+.card[data-game="bubble"] { --accent: var(--bubble-c); }
+.card[data-game="dragon"] { --accent: var(--dragon-c); }
+.card[data-game="horror"] { --accent: var(--horror-c); }
+
+.card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 12px 60px color-mix(in srgb, var(--accent) 30%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* glow blob top */
+.card::before {
+  content: '';
+  position: absolute; top: -40px; left: 50%;
+  transform: translateX(-50%);
+  width: 200px; height: 120px;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.card:hover::before { opacity: 1; }
+
+/* preview canvas area */
+.card-preview {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+.card-preview canvas {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* scan-line overlay */
+.card-preview::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px,
+    transparent 1px, transparent 3px
+  );
+  pointer-events: none;
+}
+
+/* badge */
+.badge {
+  position: absolute; top: 12px; right: 12px;
+  background: color-mix(in srgb, var(--accent) 20%, rgba(0,0,0,0.6));
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+}
+
+/* card body */
+.card-body {
+  padding: 24px 24px 28px;
+}
+.card-num {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px; font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+.card-title {
+  font-size: 22px; font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.card-sub {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+/* tags */
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+.tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: #8899bb;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* play button */
+.play-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+  font-size: 13px; font-weight: 700;
+  padding: 10px 20px; border-radius: 30px;
+  letter-spacing: 1px;
+  transition: background 0.2s, box-shadow 0.2s;
+  width: fit-content;
+}
+.card:hover .play-btn {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.play-icon {
+  width: 20px; height: 20px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.play-icon::after {
+  content: '';
+  display: block;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 9px;
+  border-color: transparent transparent transparent #000;
+  margin-left: 2px;
+}
+
+/* ── score bar ── */
+.score-bar {
+  position: relative; z-index: 10;
+  max-width: 1100px;
+  margin: 0 auto 12px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.score-item {
+  background: #0b0d1c;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.score-item::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+.score-item[data-game="bubble"] { --accent: var(--bubble-c); }
+.score-item[data-game="dragon"] { --accent: var(--dragon-c); }
+.score-item[data-game="horror"] { --accent: var(--horror-c); }
+.score-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+.score-info { flex: 1; min-width: 0; }
+.score-game-name {
+  font-size: 11px; font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.score-value {
+  font-family: 'Orbitron', monospace;
+  font-size: 20px; font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.score-value.no-record {
+  font-size: 13px;
+  color: #3a4560;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.score-label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+  letter-spacing: 1px;
+}
+/* 갱신 애니메이션 */
+@keyframes recordPop {
+  0%  { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100%{ transform: scale(1); }
+}
+.score-item.new-record {
+  animation: recordPop 0.5s ease;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.new-badge {
+  position: absolute; top: 10px; right: 12px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 7px; border-radius: 10px;
+}
+
+/* ── footer ── */
+footer {
+  position: relative; z-index: 10;
+  text-align: center;
+  padding: 0 24px 48px;
+  color: #3a4560;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* ── ambient particles ── */
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: drift linear infinite;
+  opacity: 0;
+}
+@keyframes drift {
+  0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.3; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<header>
+  <div class="logo-label">✦ Game Collection ✦</div>
+  <h1>ARCADE HUB</h1>
+  <p></p>
+  <div class="header-line"></div>
+</header>
+
+<!-- ── 최고기록 바 ── -->
+<div class="score-bar">
+  <div class="score-item" data-game="bubble" id="sb-bubble">
+    <div class="score-icon">💣</div>
+    <div class="score-info">
+      <div class="score-game-name">크레이지 버블</div>
+      <div class="score-value no-record" id="sv-bubble">기록 없음</div>
+      <div class="score-label">BEST SCORE</div>
+    </div>
+  </div>
+  <div class="score-item" data-game="dragon" id="sb-dragon">
+    <div class="score-icon">🐹</div>
+    <div class="score-info">
+      <div class="score-game-name">햄스터 런!</div>
+      <div class="score-value no-record" id="sv-dragon">기록 없음</div>
+      <div class="score-label">BEST SCORE</div>
+    </div>
+  </div>
+  <div class="score-item" data-game="horror" id="sb-horror">
+    <div class="score-icon">☠️</div>
+    <div class="score-info">
+      <div class="score-game-name">커스드 매치</div>
+      <div class="score-value no-record" id="sv-horror">기록 없음</div>
+      <div class="score-label">BEST SCORE</div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- CRAZY BUBBLE -->
+  <a class="card" data-game="bubble" href="crazyBubble.html">
+    <div class="card-preview">
+      <canvas id="cv-bubble" width="400" height="200"></canvas>
+    </div>
+    <div class="badge">BOMBERMAN</div>
+    <div class="card-body">
+      <div class="card-num">NO.01</div>
+      <div class="card-title">크레이지 버블</div>
+      <div class="card-sub">CRAZY BUBBLE</div>
+      <div class="card-desc">4인 캐릭터 중 하나를 선택하고 폭탄을 터뜨려 몬스터를 물리쳐라! 스테이지마다 달라지는 맵과 똑똑해지는 적을 상대해보자.</div>
+      <div class="tags">
+        <span class="tag">🎭 캐릭터 선택</span>
+        <span class="tag">💣 버블 폭탄</span>
+        <span class="tag">👾 몬스터 추적 AI</span>
+        <span class="tag">🗺️ 랜덤 맵</span>
+      </div>
+      <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+    </div>
+  </a>
+
+  <!-- DRAGON FLIGHT -->
+  <a class="card" data-game="dragon" href="dragonFlight.html">
+    <div class="card-preview">
+      <canvas id="cv-dragon" width="400" height="200"></canvas>
+    </div>
+    <div class="badge">SHOOTER</div>
+    <div class="card-body">
+      <div class="card-num">NO.02</div>
+      <div class="card-title">햄스터 런!</div>
+      <div class="card-sub">HAMSTER RUN</div>
+      <div class="card-desc">귀여운 햄스터가 숲길을 달린다! 도토리를 던져 여우·올빼미·고양이를 물리치고 스테이지마다 바뀌는 배경을 즐겨보자.</div>
+      <div class="tags">
+        <span class="tag">🐹 햄스터 조종</span>
+        <span class="tag">🌰 도토리 발사</span>
+        <span class="tag">🌲 5가지 스테이지</span>
+        <span class="tag">🦊 보스전</span>
+      </div>
+      <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+    </div>
+  </a>
+
+  <!-- HORROR PUZZLE -->
+  <a class="card" data-game="horror" href="horror_puzzle.html">
+    <div class="card-preview">
+      <canvas id="cv-horror" width="400" height="200"></canvas>
+    </div>
+    <div class="badge">HORROR PUZZLE</div>
+    <div class="card-body">
+      <div class="card-num">NO.03</div>
+      <div class="card-title">커스드 매치</div>
+      <div class="card-sub">CURSED MATCH</div>
+      <div class="card-desc">저주받은 퍼즐 게임. 어둠 속에서 타일을 맞추며 공포를 헤쳐나가라. 과연 끝에는 무엇이 기다리고 있을까?</div>
+      <div class="tags">
+        <span class="tag">☠️ 공포 분위기</span>
+        <span class="tag">🧩 타일 매칭</span>
+        <span class="tag">🩸 저주 테마</span>
+        <span class="tag">👁️ 미스터리</span>
+      </div>
+      <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+    </div>
+  </a>
+
+</main>
+
+<footer>
+  © 2026 ARCADE HUB
+</footer>
+
+<script>
+// ─── 최고기록 읽기 ────────────────────────────────────────
+(function(){
+  function fmt(n){ return n.toLocaleString('ko-KR'); }
+
+  // 크레이지 버블: crazyBubbleRecords_v1 → JSON array sorted by score
+  try {
+    const recs = JSON.parse(localStorage.getItem('crazyBubbleRecords_v1') || '[]');
+    if(recs.length && recs[0].score > 0){
+      const el = document.getElementById('sv-bubble');
+      el.textContent = fmt(recs[0].score);
+      el.classList.remove('no-record');
+    }
+  } catch(e){}
+
+  // 드래곤 플라이트: dragonFlightBest → int
+  try {
+    const hi = parseInt(localStorage.getItem('dragonFlightBest') || '0');
+    if(hi > 0){
+      const el = document.getElementById('sv-dragon');
+      el.textContent = fmt(hi);
+      el.classList.remove('no-record');
+    }
+  } catch(e){}
+
+  // 커스드 매치: cursedbest → int
+  try {
+    const hi = parseInt(localStorage.getItem('cursedbest') || '0');
+    if(hi > 0){
+      const el = document.getElementById('sv-horror');
+      el.textContent = fmt(hi);
+      el.classList.remove('no-record');
+    }
+  } catch(e){}
+
+  // 신기록 파라미터 감지: ?newrecord=bubble 등
+  const params = new URLSearchParams(location.search);
+  const nr = params.get('newrecord');
+  if(nr){
+    const el = document.getElementById('sb-'+nr);
+    if(el){
+      el.classList.add('new-record');
+      const badge = document.createElement('div');
+      badge.className = 'new-badge'; badge.textContent = 'NEW!';
+      el.appendChild(badge);
+    }
+    history.replaceState(null,'',location.pathname);
+  }
+})();
+
+// ─── Starfield ───────────────────────────────────────────
+(function(){
+  const c=document.getElementById('stars');
+  const ctx=c.getContext('2d');
+  let W,H,stars=[];
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; }
+  resize(); window.addEventListener('resize',resize);
+  for(let i=0;i<160;i++) stars.push({
+    x:Math.random(),y:Math.random(),
+    r:Math.random()*1.2+0.3,
+    a:Math.random(),da:0.003+Math.random()*0.005,
+    speed:0.00004+Math.random()*0.00008
+  });
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.y-=s.speed;
+      if(s.y<0) s.y=1;
+      s.a+=s.da; if(s.a>1||s.a<0) s.da*=-1;
+      ctx.globalAlpha=s.a*0.8;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// ─── Ambient Particles ───────────────────────────────────
+(function(){
+  const colors=['#4488ff','#ff6600','#cc0033','#aa44ff','#00ccff'];
+  function spawn(){
+    const el=document.createElement('div');
+    el.className='particle';
+    const c=colors[Math.floor(Math.random()*colors.length)];
+    const sz=3+Math.random()*6;
+    const dur=8+Math.random()*12;
+    el.style.cssText=`
+      left:${Math.random()*100}vw;
+      width:${sz}px;height:${sz}px;
+      background:${c};
+      box-shadow:0 0 ${sz*2}px ${c};
+      animation-duration:${dur}s;
+      animation-delay:${Math.random()*dur}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),(dur+5)*1000);
+  }
+  for(let i=0;i<18;i++) spawn();
+  setInterval(spawn,2000);
+})();
+
+// ─── Card Preview Canvases ───────────────────────────────
+// CRAZY BUBBLE preview
+(function(){
+  const c=document.getElementById('cv-bubble');
+  const ctx=c.getContext('2d');
+  const W=400,H=200;
+  // background
+  const bg=ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#0a1a40'); bg.addColorStop(1,'#081230');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // grid tiles
+  const T=32, cols=Math.ceil(W/T)+1, rows=Math.ceil(H/T)+1;
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const isDark=(x+y)%2===0;
+    ctx.fillStyle=isDark?'#0d1e4a':'#0a1840';
+    ctx.fillRect(x*T,y*T,T,T);
+  }
+  // wall blocks
+  const walls=[[1,0],[3,0],[5,0],[7,0],[9,0],[11,0],[1,2],[3,2],[5,2],[7,2],[1,4],[3,4]];
+  walls.forEach(([wx,wy])=>{
+    const px=wx*T+2,py=wy*T+2,bw=T-4,bh=T-4;
+    const wg=ctx.createLinearGradient(px,py,px,py+bh);
+    wg.addColorStop(0,'#4477cc'); wg.addColorStop(1,'#223366');
+    ctx.fillStyle=wg; ctx.fillRect(px,py,bw,bh);
+    ctx.strokeStyle='#6699ee'; ctx.lineWidth=1.5;
+    ctx.strokeRect(px+1,py+1,bw-2,bh-2);
+  });
+  // soft blocks
+  [[2,1],[4,1],[6,1],[2,3],[8,1],[10,1]].forEach(([bx,by])=>{
+    const px=bx*T+3,py=by*T+3,bw=T-6,bh=T-6;
+    const sg=ctx.createLinearGradient(px,py,px,py+bh);
+    sg.addColorStop(0,'#886633'); sg.addColorStop(1,'#664422');
+    ctx.fillStyle=sg; ctx.fillRect(px,py,bw,bh);
+    // brick lines
+    ctx.strokeStyle='#aa8844'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(px,py+bh/2); ctx.lineTo(px+bw,py+bh/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px+bw/2,py); ctx.lineTo(px+bw/2,py+bh/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px+bw/4,py+bh/2); ctx.lineTo(px+bw/4,py+bh); ctx.stroke();
+  });
+  // character (simple blue bomberman)
+  function drawChar(px,py,col){
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(px,py-6,10,0,Math.PI*2); ctx.fill(); // head
+    ctx.beginPath(); ctx.ellipse(px,py+6,7,9,0,0,Math.PI*2); ctx.fill(); // body
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(px-3,py-7,3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+3,py-7,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111';
+    ctx.beginPath(); ctx.arc(px-3,py-7,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+3,py-7,1.5,0,Math.PI*2); ctx.fill();
+  }
+  drawChar(W/2,H/2+10,'#3366dd');
+  // bomb
+  function drawBomb(px,py){
+    ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(px,py,8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#555'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(px,py,8,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='#ff8800';
+    ctx.beginPath(); ctx.arc(px+2,py-9,3,0,Math.PI*2); ctx.fill();
+  }
+  drawBomb(W/2-40, H/2+10);
+  // monster (slime)
+  function drawSlime(px,py,col){
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.ellipse(px,py,12,10,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(px-4,py-2,3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+4,py-2,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(px-4,py-2,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+4,py-2,1.5,0,Math.PI*2); ctx.fill();
+  }
+  drawSlime(W/2+50, H/2, '#44cc66');
+  drawSlime(W-60, H/2-20, '#cc4488');
+
+  // title overlay
+  ctx.fillStyle='rgba(5,10,30,0.45)';
+  ctx.fillRect(0,0,W,H);
+  ctx.font='bold 26px "Noto Sans KR", sans-serif';
+  ctx.textAlign='center';
+  ctx.fillStyle='#fff';
+  ctx.shadowColor='#4488ff'; ctx.shadowBlur=16;
+  ctx.fillText('크레이지 버블', W/2, H/2+8);
+  ctx.font='13px "Noto Sans KR"';
+  ctx.fillStyle='#8ab4ff';
+  ctx.shadowBlur=0;
+  ctx.fillText('캐릭터를 선택하고 몬스터를 물리쳐라!', W/2, H/2+28);
+})();
+
+// HAMSTER RUN preview
+(function(){
+  const c=document.getElementById('cv-dragon');
+  const ctx=c.getContext('2d');
+  const W=400,H=200;
+  // spring forest bg
+  const sg=ctx.createLinearGradient(0,0,0,H);
+  sg.addColorStop(0,'#87ceeb'); sg.addColorStop(1,'#c8e8f8');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H);
+  // clouds
+  ctx.fillStyle='rgba(255,255,255,0.8)';
+  [[60,35,45],[180,25,35],[300,40,50]].forEach(([cx,cy,cw])=>{
+    ctx.beginPath();ctx.ellipse(cx,cy,cw,cw*.45,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx-cw*.3,cy+4,cw*.55,cw*.38,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+cw*.3,cy+4,cw*.55,cw*.38,0,0,Math.PI*2);ctx.fill();
+  });
+  const GROUND=150;
+  // far trees
+  function tree(x,h,w,col0,col1,trunk){
+    ctx.fillStyle=trunk;ctx.fillRect(x-w*.12,GROUND-h*.4,w*.24,h*.4);
+    ctx.fillStyle=col1;ctx.beginPath();ctx.arc(x,GROUND-h*.62,w*.6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=col0;ctx.beginPath();ctx.arc(x-w*.15,GROUND-h*.7,w*.42,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=0.5;
+  [[30,65,30],[110,70,35],[200,60,28],[310,72,32],[380,66,30]].forEach(([x,h,w])=>tree(x,h,w,'#4aae2a','#2d6e1a','#8B5E3C'));
+  ctx.globalAlpha=1;
+  // ground
+  const gg=ctx.createLinearGradient(0,GROUND,0,H);
+  gg.addColorStop(0,'#7bc142');gg.addColorStop(0.4,'#5a8c2a');
+  ctx.fillStyle=gg;ctx.fillRect(0,GROUND,W,H-GROUND);
+  // near trees
+  [[80,85,38],[250,90,42],[360,80,35]].forEach(([x,h,w])=>tree(x,h,w,'#4aae2a','#2d6e1a','#8B5E3C'));
+  // grass tufts
+  ctx.fillStyle='#88cc44cc';
+  for(let i=0;i<16;i++){const gx=i*26;ctx.beginPath();ctx.moveTo(gx,GROUND);ctx.lineTo(gx+3,GROUND-9);ctx.lineTo(gx+6,GROUND);ctx.fill();}
+
+  // hamster (simple front-facing chubby)
+  function miniHamster(px,py){
+    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px,py+4,22,18,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f0cfa0';ctx.beginPath();ctx.ellipse(px+2,py+8,12,11,0,0,Math.PI*2);ctx.fill();
+    // cheeks
+    ctx.fillStyle='#f0cfa0';
+    ctx.beginPath();ctx.ellipse(px-16,py-10,8,7,-.25,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+16,py-10,8,7,.25,0,Math.PI*2);ctx.fill();
+    // head
+    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px+2,py-15,17,15,0,0,Math.PI*2);ctx.fill();
+    // ears
+    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px-10,py-27,7,6,-.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+12,py-27,7,6,.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff9aaa';ctx.beginPath();ctx.ellipse(px-10,py-27,4.5,3.5,-.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+12,py-27,4.5,3.5,.3,0,Math.PI*2);ctx.fill();
+    // eyes
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(px-6,py-17,5,4.5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+9,py-17,5,4.5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a0a00';ctx.beginPath();ctx.arc(px-6,py-17,3.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(px+9,py-17,3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px-8,py-19,1.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(px+7,py-19,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff8899';ctx.beginPath();ctx.ellipse(px+2,py-10,3,2.2,0,0,Math.PI*2);ctx.fill();
+  }
+  miniHamster(100, GROUND-38);
+
+  // acorns
+  [[160,GROUND-55],[195,GROUND-50],[230,GROUND-48]].forEach(([ax,ay])=>{
+    ctx.fillStyle='#7B4F2A';ctx.beginPath();ctx.ellipse(ax,ay+2,4,6,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#4a2e10';ctx.beginPath();ctx.ellipse(ax,ay-3,5.5,3.5,0,0,Math.PI*2);ctx.fill();
+  });
+  // fox enemy
+  ctx.fillStyle='#d4692a';
+  ctx.beginPath();ctx.ellipse(300,GROUND-28,18,14,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(315,GROUND-36,13,11,.2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#f0c090';ctx.beginPath();ctx.ellipse(323,GROUND-33,7,5,.2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(317,GROUND-39,3.5,0,Math.PI*2);ctx.fill();
+
+  // overlay
+  ctx.fillStyle='rgba(5,20,3,0.35)';ctx.fillRect(0,0,W,H);
+  ctx.font='bold 26px "Noto Sans KR",sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='#fff';ctx.shadowColor='#44cc00';ctx.shadowBlur=16;
+  ctx.fillText('햄스터 런!',W/2,H/2+8);
+  ctx.font='13px "Noto Sans KR"';ctx.fillStyle='#aaffaa';ctx.shadowBlur=0;
+  ctx.fillText('도토리를 던져 적을 물리쳐라!',W/2,H/2+28);
+})();
+
+// HORROR PUZZLE preview
+(function(){
+  const c=document.getElementById('cv-horror');
+  const ctx=c.getContext('2d');
+  const W=400,H=200;
+  // dark bg
+  ctx.fillStyle='#060006'; ctx.fillRect(0,0,W,H);
+  // blood glow
+  const bg1=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,120);
+  bg1.addColorStop(0,'rgba(100,0,20,0.4)'); bg1.addColorStop(1,'transparent');
+  ctx.fillStyle=bg1; ctx.fillRect(0,0,W,H);
+  // rain drops
+  ctx.strokeStyle='rgba(139,0,0,0.5)'; ctx.lineWidth=1;
+  for(let i=0;i<30;i++){
+    const x=Math.random()*W, y=Math.random()*H, l=10+Math.random()*20;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-2,y+l); ctx.stroke();
+  }
+  // tiles 4x3 grid
+  const cols=4,rows=3,pad=6;
+  const tw=(W-180)/cols, th=(H-60)/rows;
+  const ox=80, oy=30;
+  const tileColors=[
+    '#1a0008','#0a001a','#120015','#08000f',
+    '#0f0010','#1a0008','#08001a','#150010',
+    '#0a001a','#150008','#0f000f','#1a0015'
+  ];
+  const glowColors=['#cc0033','#8800aa','#cc0033','#660022',
+                    '#8800aa','#cc0033','#660088','#cc0033',
+                    '#cc0033','#880044','#cc0033','#660088'];
+  for(let row=0;row<rows;row++) for(let col=0;col<cols;col++){
+    const i=row*cols+col;
+    const tx=ox+col*(tw+pad), ty=oy+row*(th+pad);
+    ctx.fillStyle=tileColors[i];
+    ctx.roundRect?ctx.roundRect(tx,ty,tw,th,8):ctx.fillRect(tx,ty,tw,th);
+    ctx.fill();
+    ctx.strokeStyle=glowColors[i]+'88';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.roundRect?ctx.roundRect(tx,ty,tw,th,8):ctx.strokeRect(tx,ty,tw,th);
+    ctx.stroke();
+    // skull icon on some tiles
+    if([0,3,5,9].includes(i)){
+      ctx.font=`${tw*0.5}px serif`;
+      ctx.textAlign='center';
+      ctx.fillStyle='rgba(200,0,40,0.7)';
+      ctx.fillText('💀',tx+tw/2,ty+th/2+th*0.18);
+    }
+  }
+
+  // overlay
+  ctx.fillStyle='rgba(4,0,6,0.35)';
+  ctx.fillRect(0,0,W,H);
+  ctx.font='bold 26px "Creepster","Noto Sans KR",serif';
+  ctx.textAlign='center';
+  ctx.fillStyle='#cc0033';
+  ctx.shadowColor='#ff0030'; ctx.shadowBlur=20;
+  ctx.fillText('CURSED MATCH', W/2, H/2+8);
+  ctx.font='13px "Noto Sans KR"';
+  ctx.fillStyle='#dd6677';
+  ctx.shadowBlur=0;
+  ctx.fillText('저주받은 퍼즐 — 살아남을 수 있을까?', W/2, H/2+28);
+})();
+</script>
+</body>
+</html>
