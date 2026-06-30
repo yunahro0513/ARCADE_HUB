@@ -17,6 +17,7 @@
   --dragon-c: #ff6600;
   --horror-c: #cc0033;
   --dog-c: #44bb44;
+  --run-c: #ffcc00;
   --glow-size: 80px;
 }
 
@@ -111,6 +112,8 @@ main {
 .card-wrap[data-game="horror"] { --accent: var(--horror-c); }
 .card[data-game="dog"] { --accent: var(--dog-c); }
 .card-wrap[data-game="dog"] { --accent: var(--dog-c); }
+.card[data-game="run"] { --accent: var(--run-c); }
+.card-wrap[data-game="run"] { --accent: var(--run-c); }
 
 .card:hover {
   border-color: var(--accent);
@@ -473,6 +476,37 @@ footer {
   </a>
   </div>
 
+  <!-- DOG RUN -->
+  <div class="card-wrap" data-game="run">
+    <div class="card-score">
+      <div class="score-icon">🏃</div>
+      <div class="score-info">
+        <div class="score-game-name">도그 런</div>
+        <div class="score-value no-record" id="sv-run">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
+    <a class="card" data-game="run" href="dogRun.html">
+      <div class="card-preview">
+        <canvas id="cv-run" width="400" height="200"></canvas>
+      </div>
+      <div class="badge">RUNNER</div>
+      <div class="card-body">
+        <div class="card-num">NO.05</div>
+        <div class="card-title">도그 런!</div>
+        <div class="card-sub">DOG RUN</div>
+        <div class="card-desc">강아지 3종 중 하나를 골라 뛰어라! 고양이와 새를 피해 최대한 멀리 달리자. 점수 150↑ 2단 점프 해금!</div>
+        <div class="tags">
+          <span class="tag">🐕 강아지 3종</span>
+          <span class="tag">😼 고양이 장애물</span>
+          <span class="tag">🐦 날아오는 새</span>
+          <span class="tag">🌙 낮/밤 전환</span>
+        </div>
+        <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+      </div>
+    </a>
+  </div>
+
 </main>
 
 <footer>
@@ -535,6 +569,11 @@ footer {
       el.textContent = fmt(recs[0].score);
       el.classList.remove('no-record');
     }
+  } catch(e){}
+  // 도그 런: dogRunBest_v1
+  try {
+    const v = parseInt(localStorage.getItem('dogRunBest_v1')||'0')||0;
+    if(v>0){ const el=document.getElementById('sv-run'); el.textContent=v.toLocaleString('ko-KR'); el.classList.remove('no-record'); }
   } catch(e){}
 })();
 
@@ -891,6 +930,85 @@ footer {
   ctx.font='13px Noto Sans KR, sans-serif';
   ctx.fillStyle='rgba(150,220,100,0.75)';
   ctx.fillText('강아지와 함께하는 자연 버블 어드벤처', W/2, H/2+28);
+})();
+
+// ── Dog Run preview canvas ──
+(function(){
+  const cv=document.getElementById('cv-run');
+  if(!cv)return;
+  const ctx=cv.getContext('2d'),W=400,H=200,GY=145;
+  // Sky
+  const sky=ctx.createLinearGradient(0,0,0,GY);
+  sky.addColorStop(0,'#87ceeb');sky.addColorStop(1,'#d4eeff');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,GY);
+  // Clouds
+  ctx.fillStyle='rgba(255,255,255,.8)';
+  [[80,30,55],[220,20,40],[330,35,60]].forEach(([cx,cy,cw])=>{
+    ctx.beginPath();ctx.ellipse(cx,cy,cw*.5,cw*.22,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx-cw*.22,cy+4,cw*.35,cw*.18,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+cw*.22,cy+4,cw*.35,cw*.18,0,0,Math.PI*2);ctx.fill();
+  });
+  // Ground
+  const gg=ctx.createLinearGradient(0,GY,0,H);
+  gg.addColorStop(0,'#7bc142');gg.addColorStop(1,'#4a8c20');
+  ctx.fillStyle=gg;ctx.fillRect(0,GY,W,H-GY);
+  ctx.strokeStyle='rgba(80,160,30,.6)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,GY);ctx.lineTo(W,GY);ctx.stroke();
+  // Simple dog (brown)
+  function miniDog(px,py){
+    ctx.fillStyle='#c88428';
+    // tail
+    ctx.beginPath();ctx.moveTo(px-14,py-8);ctx.quadraticCurveTo(px-24,py-24,px-16,py-28);ctx.quadraticCurveTo(px-10,py-24,px-12,py-12);ctx.fill();
+    // body
+    ctx.beginPath();ctx.ellipse(px,py,18,12,-.1,0,Math.PI*2);ctx.fill();
+    // belly
+    ctx.fillStyle='#e8b870';ctx.beginPath();ctx.ellipse(px+3,py+4,10,7,0,0,Math.PI*2);ctx.fill();
+    // legs
+    ctx.fillStyle='#c88428';
+    ctx.beginPath();ctx.ellipse(px-6,py+12,4,7,.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+8,py+12,4,7,-.1,0,Math.PI*2);ctx.fill();
+    // head
+    ctx.fillStyle='#c88428';ctx.beginPath();ctx.ellipse(px+16,py-8,12,10,.15,0,Math.PI*2);ctx.fill();
+    // ear
+    ctx.fillStyle='#9a6010';ctx.beginPath();ctx.ellipse(px+10,py-4,5,9,-.4,0,Math.PI*2);ctx.fill();
+    // muzzle
+    ctx.fillStyle='#e8b870';ctx.beginPath();ctx.ellipse(px+25,py-6,6,5,0,0,Math.PI*2);ctx.fill();
+    // nose
+    ctx.fillStyle='#220000';ctx.beginPath();ctx.ellipse(px+29,py-8,2.5,1.8,0,0,Math.PI*2);ctx.fill();
+    // eye
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+17,py-11,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a0800';ctx.beginPath();ctx.arc(px+17,py-11,2,0,Math.PI*2);ctx.fill();
+  }
+  miniDog(65,GY-24);
+  // Cat obstacle
+  function miniCat(cx,cy){
+    ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(cx,cy+2,14,4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#886644';ctx.beginPath();ctx.ellipse(cx,cy-20,14,18,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#664422';
+    ctx.beginPath();ctx.moveTo(cx-10,cy-35);ctx.lineTo(cx-15,cy-48);ctx.lineTo(cx-5,cy-37);ctx.fill();
+    ctx.beginPath();ctx.moveTo(cx+10,cy-35);ctx.lineTo(cx+15,cy-48);ctx.lineTo(cx+5,cy-37);ctx.fill();
+    ctx.fillStyle='#886644';ctx.beginPath();ctx.ellipse(cx,cy-36,14,12,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.ellipse(cx,cy-32,8,6,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ddaa00';ctx.beginPath();ctx.ellipse(cx-5,cy-37,3,2.5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+5,cy-37,3,2.5,0,0,Math.PI*2);ctx.fill();
+  }
+  miniCat(230, GY);
+  miniCat(270, GY);
+  // Bird
+  ctx.save();ctx.translate(330,GY-55);
+  ctx.fillStyle='#445588';ctx.beginPath();ctx.ellipse(0,0,14,7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#667799';
+  ctx.beginPath();ctx.moveTo(-3,-1);ctx.lineTo(-20,-8);ctx.lineTo(-7,4);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(3,-1);ctx.lineTo(20,-8);ctx.lineTo(7,4);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // Overlay + title
+  ctx.fillStyle='rgba(5,15,30,.3)';ctx.fillRect(0,0,W,H);
+  ctx.font='bold 28px Orbitron,monospace';ctx.textAlign='center';
+  ctx.fillStyle='#000';ctx.shadowColor='transparent';ctx.fillText('🐾 도그 런!',W/2+2,H/2+10);
+  ctx.fillStyle='#ffdd44';ctx.shadowColor='#cc8800';ctx.shadowBlur=18;
+  ctx.fillText('🐾 도그 런!',W/2,H/2+8);ctx.shadowBlur=0;
+  ctx.font='13px Noto Sans KR,sans-serif';ctx.fillStyle='rgba(255,220,100,.8)';
+  ctx.fillText('장애물을 피해 최대한 멀리!',W/2,H/2+32);
 })();
 </script>
 </body>
