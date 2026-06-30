@@ -16,6 +16,7 @@
   --bubble-c: #4488ff;
   --dragon-c: #ff6600;
   --horror-c: #cc0033;
+  --dog-c: #44bb44;
   --glow-size: 80px;
 }
 
@@ -103,8 +104,13 @@ main {
 
 /* per-game accent */
 .card[data-game="bubble"] { --accent: var(--bubble-c); }
+.card-wrap[data-game="bubble"] { --accent: var(--bubble-c); }
 .card[data-game="dragon"] { --accent: var(--dragon-c); }
+.card-wrap[data-game="dragon"] { --accent: var(--dragon-c); }
 .card[data-game="horror"] { --accent: var(--horror-c); }
+.card-wrap[data-game="horror"] { --accent: var(--horror-c); }
+.card[data-game="dog"] { --accent: var(--dog-c); }
+.card-wrap[data-game="dog"] { --accent: var(--dog-c); }
 
 .card:hover {
   border-color: var(--accent);
@@ -236,50 +242,6 @@ main {
   margin-left: 2px;
 }
 
-/* ── score bar ── */
-.score-bar {
-  position: relative; z-index: 10;
-  max-width: 1100px;
-  margin: 0 auto 12px;
-  padding: 0 24px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.score-item {
-  background: #0b0d1c;
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 16px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.3s;
-}
-.score-item::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: var(--accent);
-  opacity: 0.7;
-}
-.score-item[data-game="bubble"] { --accent: var(--bubble-c); }
-.score-item[data-game="dragon"] { --accent: var(--dragon-c); }
-.score-item[data-game="horror"] { --accent: var(--horror-c); }
-.score-icon {
-  font-size: 26px;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 6px var(--accent));
-}
-.score-info { flex: 1; min-width: 0; }
-.score-game-name {
-  font-size: 11px; font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
 .score-value {
   font-family: 'Orbitron', monospace;
   font-size: 20px; font-weight: 700;
@@ -344,6 +306,34 @@ footer {
   90%  { opacity: 0.3; }
   100% { transform: translateY(-10vh) scale(1); opacity: 0; }
 }
+
+/* ── per-card score badge ── */
+.card-score {
+  background: #0b0d1c;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px 14px 0 0;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: none;
+  position: relative;
+}
+.card-score::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 14px 14px 0 0;
+  background: var(--accent);
+  opacity: 0.8;
+}
+.card-score .score-icon { font-size: 22px; flex-shrink: 0; filter: drop-shadow(0 0 5px var(--accent)); }
+.card-score .score-info { flex: 1; }
+.card-score .score-game-name { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px; }
+.card-score .score-value { font-size: 20px; font-weight: 900; font-family: 'Orbitron', monospace; color: #fff; letter-spacing: 1px; }
+.card-score .score-value.no-record { font-size: 12px; color: var(--muted); font-family: inherit; font-weight: 400; }
+.card-score .score-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-top: 1px; }
+.card-wrap { display: flex; flex-direction: column; }
+.card-wrap .card { border-radius: 0 0 20px 20px; }
 </style>
 </head>
 <body>
@@ -357,37 +347,18 @@ footer {
   <div class="header-line"></div>
 </header>
 
-<!-- ── 최고기록 바 ── -->
-<div class="score-bar">
-  <div class="score-item" data-game="bubble" id="sb-bubble">
-    <div class="score-icon">💣</div>
-    <div class="score-info">
-      <div class="score-game-name">크레이지 버블</div>
-      <div class="score-value no-record" id="sv-bubble">기록 없음</div>
-      <div class="score-label">BEST SCORE</div>
-    </div>
-  </div>
-  <div class="score-item" data-game="dragon" id="sb-dragon">
-    <div class="score-icon">🐹</div>
-    <div class="score-info">
-      <div class="score-game-name">햄스터 런!</div>
-      <div class="score-value no-record" id="sv-dragon">기록 없음</div>
-      <div class="score-label">BEST SCORE</div>
-    </div>
-  </div>
-  <div class="score-item" data-game="horror" id="sb-horror">
-    <div class="score-icon">☠️</div>
-    <div class="score-info">
-      <div class="score-game-name">커스드 매치</div>
-      <div class="score-value no-record" id="sv-horror">기록 없음</div>
-      <div class="score-label">BEST SCORE</div>
-    </div>
-  </div>
-</div>
-
 <main>
 
   <!-- CRAZY BUBBLE -->
+  <div class="card-wrap" data-game="bubble">
+    <div class="card-score">
+      <div class="score-icon">💣</div>
+      <div class="score-info">
+        <div class="score-game-name">크레이지 버블</div>
+        <div class="score-value no-record" id="sv-bubble">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
   <a class="card" data-game="bubble" href="crazyBubble.html">
     <div class="card-preview">
       <canvas id="cv-bubble" width="400" height="200"></canvas>
@@ -407,8 +378,18 @@ footer {
       <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
     </div>
   </a>
+  </div>
 
   <!-- DRAGON FLIGHT -->
+  <div class="card-wrap" data-game="dragon">
+    <div class="card-score">
+      <div class="score-icon">🐕</div>
+      <div class="score-info">
+        <div class="score-game-name">쿨도그 런!</div>
+        <div class="score-value no-record" id="sv-dragon">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
   <a class="card" data-game="dragon" href="dragonFlight.html">
     <div class="card-preview">
       <canvas id="cv-dragon" width="400" height="200"></canvas>
@@ -416,20 +397,30 @@ footer {
     <div class="badge">SHOOTER</div>
     <div class="card-body">
       <div class="card-num">NO.02</div>
-      <div class="card-title">햄스터 런!</div>
-      <div class="card-sub">HAMSTER RUN</div>
-      <div class="card-desc">귀여운 햄스터가 숲길을 달린다! 도토리를 던져 여우·올빼미·고양이를 물리치고 스테이지마다 바뀌는 배경을 즐겨보자.</div>
+      <div class="card-title">쿨도그 런!</div>
+      <div class="card-sub">COOL DOG RUN</div>
+      <div class="card-desc">귀여운 강아지가 신나게 달린다! 뼈다귀를 던져 적을 물리치고 스테이지마다 바뀌는 배경을 즐겨보자.</div>
       <div class="tags">
-        <span class="tag">🐹 햄스터 조종</span>
-        <span class="tag">🌰 도토리 발사</span>
+        <span class="tag">🐕 강아지 조종</span>
+        <span class="tag">🦴 뼈다귀 발사</span>
         <span class="tag">🌲 5가지 스테이지</span>
         <span class="tag">🦊 보스전</span>
       </div>
       <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
     </div>
   </a>
+  </div>
 
   <!-- HORROR PUZZLE -->
+  <div class="card-wrap" data-game="horror">
+    <div class="card-score">
+      <div class="score-icon">☠️</div>
+      <div class="score-info">
+        <div class="score-game-name">커스드 매치</div>
+        <div class="score-value no-record" id="sv-horror">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
   <a class="card" data-game="horror" href="horror_puzzle.html">
     <div class="card-preview">
       <canvas id="cv-horror" width="400" height="200"></canvas>
@@ -449,6 +440,38 @@ footer {
       <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
     </div>
   </a>
+  </div>
+
+  <!-- DOG BUBBLE -->
+  <div class="card-wrap" data-game="dog">
+    <div class="card-score">
+      <div class="score-icon">🐾</div>
+      <div class="score-info">
+        <div class="score-game-name">도그 버블</div>
+        <div class="score-value no-record" id="sv-dog">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
+  <a class="card" data-game="dog" href="dogBubble.html">
+    <div class="card-preview">
+      <canvas id="cv-dog" width="400" height="200"></canvas>
+    </div>
+    <div class="badge">NATURE BUBBLE</div>
+    <div class="card-body">
+      <div class="card-num">NO.04</div>
+      <div class="card-title">도그 버블</div>
+      <div class="card-sub">DOG BUBBLE</div>
+      <div class="card-desc">귀여운 강아지 3종 중 하나를 골라 자연 속 맵에서 사나운 개·고양이 적을 버블로 날려버려라!</div>
+      <div class="tags">
+        <span class="tag">🐾 강아지 3종</span>
+        <span class="tag">💣 버블 폭탄</span>
+        <span class="tag">🌿 자연 테마</span>
+        <span class="tag">🐱 개·고양이 적</span>
+      </div>
+      <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+    </div>
+  </a>
+  </div>
 
 </main>
 
@@ -504,6 +527,15 @@ footer {
     }
     history.replaceState(null,'',location.pathname);
   }
+  // 도그 버블: dogBubbleRecords_v1
+  try {
+    const recs = JSON.parse(localStorage.getItem('dogBubbleRecords_v1') || '[]');
+    if(recs.length && recs[0].score > 0){
+      const el = document.getElementById('sv-dog');
+      el.textContent = fmt(recs[0].score);
+      el.classList.remove('no-record');
+    }
+  } catch(e){}
 })();
 
 // ─── Starfield ───────────────────────────────────────────
@@ -650,7 +682,7 @@ footer {
   ctx.fillText('캐릭터를 선택하고 몬스터를 물리쳐라!', W/2, H/2+28);
 })();
 
-// HAMSTER RUN preview
+// COOL DOG RUN preview
 (function(){
   const c=document.getElementById('cv-dragon');
   const ctx=c.getContext('2d');
@@ -686,51 +718,62 @@ footer {
   ctx.fillStyle='#88cc44cc';
   for(let i=0;i<16;i++){const gx=i*26;ctx.beginPath();ctx.moveTo(gx,GROUND);ctx.lineTo(gx+3,GROUND-9);ctx.lineTo(gx+6,GROUND);ctx.fill();}
 
-  // hamster (simple front-facing chubby)
-  function miniHamster(px,py){
-    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px,py+4,22,18,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#f0cfa0';ctx.beginPath();ctx.ellipse(px+2,py+8,12,11,0,0,Math.PI*2);ctx.fill();
-    // cheeks
-    ctx.fillStyle='#f0cfa0';
-    ctx.beginPath();ctx.ellipse(px-16,py-10,8,7,-.25,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(px+16,py-10,8,7,.25,0,Math.PI*2);ctx.fill();
+  // brown dog (running pose, side view)
+  function miniDog(px,py){
+    // tail
+    ctx.fillStyle='#c88428';
+    ctx.beginPath();ctx.moveTo(px-18,py-10);ctx.quadraticCurveTo(px-28,py-28,px-20,py-32);
+    ctx.quadraticCurveTo(px-14,py-28,px-16,py-14);ctx.fill();
+    // body
+    ctx.fillStyle='#c88428';ctx.beginPath();ctx.ellipse(px,py,22,14,-.15,0,Math.PI*2);ctx.fill();
+    // belly
+    ctx.fillStyle='#e8b870';ctx.beginPath();ctx.ellipse(px+4,py+4,12,8,-.1,0,Math.PI*2);ctx.fill();
+    // legs
+    ctx.fillStyle='#c88428';
+    ctx.beginPath();ctx.ellipse(px-8,py+14,5,8,.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+10,py+14,5,8,-.1,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#9a6010';
+    ctx.beginPath();ctx.ellipse(px-9,py+21,4,4,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(px+10,py+21,4,4,0,0,Math.PI*2);ctx.fill();
     // head
-    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px+2,py-15,17,15,0,0,Math.PI*2);ctx.fill();
-    // ears
-    ctx.fillStyle='#c8782a';ctx.beginPath();ctx.ellipse(px-10,py-27,7,6,-.3,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(px+12,py-27,7,6,.3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ff9aaa';ctx.beginPath();ctx.ellipse(px-10,py-27,4.5,3.5,-.3,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(px+12,py-27,4.5,3.5,.3,0,Math.PI*2);ctx.fill();
-    // eyes
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(px-6,py-17,5,4.5,0,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(px+9,py-17,5,4.5,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#1a0a00';ctx.beginPath();ctx.arc(px-6,py-17,3.5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(px+9,py-17,3.5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px-8,py-19,1.3,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(px+7,py-19,1.3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ff8899';ctx.beginPath();ctx.ellipse(px+2,py-10,3,2.2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#c88428';ctx.beginPath();ctx.ellipse(px+20,py-10,14,12,0.15,0,Math.PI*2);ctx.fill();
+    // ear (floppy)
+    ctx.fillStyle='#9a6010';ctx.beginPath();ctx.ellipse(px+14,py-6,6,10,-.4,0,Math.PI*2);ctx.fill();
+    // muzzle
+    ctx.fillStyle='#e8b870';ctx.beginPath();ctx.ellipse(px+30,py-8,8,6,0,0,Math.PI*2);ctx.fill();
+    // nose
+    ctx.fillStyle='#220000';ctx.beginPath();ctx.ellipse(px+36,py-10,3,2,0,0,Math.PI*2);ctx.fill();
+    // eye
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+22,py-14,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a0800';ctx.beginPath();ctx.arc(px+22,py-14,2.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+21,py-15,1,0,Math.PI*2);ctx.fill();
   }
-  miniHamster(100, GROUND-38);
+  miniDog(72, GROUND-32);
 
-  // acorns
-  [[160,GROUND-55],[195,GROUND-50],[230,GROUND-48]].forEach(([ax,ay])=>{
-    ctx.fillStyle='#7B4F2A';ctx.beginPath();ctx.ellipse(ax,ay+2,4,6,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#4a2e10';ctx.beginPath();ctx.ellipse(ax,ay-3,5.5,3.5,0,0,Math.PI*2);ctx.fill();
+  // bones (instead of acorns)
+  [[168,GROUND-52],[200,GROUND-48],[234,GROUND-45]].forEach(([bx,by])=>{
+    ctx.fillStyle='#eee';
+    ctx.beginPath();ctx.ellipse(bx,by,6,3,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx-5,by,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx+5,by,3,0,Math.PI*2);ctx.fill();
   });
-  // fox enemy
-  ctx.fillStyle='#d4692a';
-  ctx.beginPath();ctx.ellipse(300,GROUND-28,18,14,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(315,GROUND-36,13,11,.2,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#f0c090';ctx.beginPath();ctx.ellipse(323,GROUND-33,7,5,.2,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(317,GROUND-39,3.5,0,Math.PI*2);ctx.fill();
+  // mean cat enemy
+  ctx.fillStyle='#886600';
+  ctx.beginPath();ctx.ellipse(308,GROUND-22,16,12,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(320,GROUND-32,12,10,.15,0,Math.PI*2);ctx.fill();
+  // ears
+  ctx.fillStyle='#664400';
+  ctx.beginPath();ctx.moveTo(314,GROUND-40);ctx.lineTo(320,GROUND-50);ctx.lineTo(324,GROUND-40);ctx.fill();
+  ctx.beginPath();ctx.moveTo(324,GROUND-38);ctx.lineTo(330,GROUND-47);ctx.lineTo(333,GROUND-38);ctx.fill();
+  ctx.fillStyle='#ddaa00';ctx.beginPath();ctx.arc(321,GROUND-34,3,0,Math.PI*2);ctx.fill();
 
   // overlay
   ctx.fillStyle='rgba(5,20,3,0.35)';ctx.fillRect(0,0,W,H);
   ctx.font='bold 26px "Noto Sans KR",sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff';ctx.shadowColor='#44cc00';ctx.shadowBlur=16;
-  ctx.fillText('햄스터 런!',W/2,H/2+8);
+  ctx.fillText('쿨도그 런!',W/2,H/2+8);
   ctx.font='13px "Noto Sans KR"';ctx.fillStyle='#aaffaa';ctx.shadowBlur=0;
-  ctx.fillText('도토리를 던져 적을 물리쳐라!',W/2,H/2+28);
+  ctx.fillText('강아지와 함께 달려라!',W/2,H/2+28);
 })();
 
 // HORROR PUZZLE preview
@@ -794,6 +837,60 @@ footer {
   ctx.fillStyle='#dd6677';
   ctx.shadowBlur=0;
   ctx.fillText('저주받은 퍼즐 — 살아남을 수 있을까?', W/2, H/2+28);
+})();
+
+// ── Dog Bubble preview canvas ──
+(function(){
+  const cv = document.getElementById('cv-dog');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W=400, H=200;
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#0d2010'); sky.addColorStop(1,'#1a4020');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  // Stars
+  ctx.fillStyle='rgba(255,255,200,0.6)';
+  for(let i=0;i<30;i++){
+    const sx=(i*73)%W, sy=(i*47)%100;
+    ctx.fillRect(sx,sy,1.5,1.5);
+  }
+  // Ground stripe
+  const g=ctx.createLinearGradient(0,140,0,H);
+  g.addColorStop(0,'#4a9018'); g.addColorStop(1,'#2a6008');
+  ctx.fillStyle=g; ctx.fillRect(0,140,W,H-140);
+  // Grid walls (dark stone)
+  ctx.fillStyle='#1e2a12';
+  const walls=[[0,3],[2,3],[4,3],[6,3],[8,3],[10,3],[0,1],[10,1]];
+  for(const [gx,gy] of walls){
+    ctx.fillRect(gx*36+10, gy*44+10, 34, 42);
+    // brick lines
+    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+    ctx.strokeRect(gx*36+12, gy*44+12, 30, 18);
+    ctx.strokeRect(gx*36+12, gy*44+30, 30, 18);
+  }
+  // Soft blocks (wood crates)
+  ctx.fillStyle='#4a2808';
+  const blocks=[[3,2],[5,2],[7,2],[2,1],[8,1]];
+  for(const [bx,by] of blocks){
+    ctx.fillRect(bx*36+10, by*44+10, 34, 42);
+    ctx.strokeStyle='rgba(255,200,100,.3)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(bx*36+12,by*44+12,30,38);
+    ctx.beginPath();ctx.moveTo(bx*36+10,by*44+31);ctx.lineTo(bx*36+44,by*44+31);ctx.stroke();
+  }
+  // Title text
+  ctx.font='bold 28px Orbitron, monospace';
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillText('🐾 DOG BUBBLE', W/2+2, H/2+2);
+  ctx.fillStyle='#88ee44';
+  ctx.shadowColor='#44aa00'; ctx.shadowBlur=18;
+  ctx.fillText('🐾 DOG BUBBLE', W/2, H/2);
+  ctx.shadowBlur=0;
+  // Sub
+  ctx.font='13px Noto Sans KR, sans-serif';
+  ctx.fillStyle='rgba(150,220,100,0.75)';
+  ctx.fillText('강아지와 함께하는 자연 버블 어드벤처', W/2, H/2+28);
 })();
 </script>
 </body>
