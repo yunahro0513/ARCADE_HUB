@@ -16,8 +16,9 @@ canvas { display:block; border:2px solid #0066bb; border-radius:4px;
   box-shadow:0 0 30px #004488aa; }
 #screen {
   position:absolute; inset:0;
-  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:14px;
+  display:flex; flex-direction:column; justify-content:flex-start; align-items:center; gap:12px;
   background:rgba(0,6,28,.92); border-radius:4px; z-index:10;
+  overflow-y:auto; padding:18px 10px 14px;
 }
 #screen.hide { display:none; }
 #screen h1 { color:#33ddff; font-size:34px; text-shadow:0 0 22px #0099ff; letter-spacing:2px; }
@@ -60,10 +61,10 @@ canvas { display:block; border:2px solid #0066bb; border-radius:4px;
 
 /* ── Character Select ── */
 .cs-lbl { color:#88ccff; font-size:10px; font-weight:bold; letter-spacing:2px; }
-.char-cards { display:flex; gap:7px; }
+.char-cards { display:flex; flex-wrap:wrap; justify-content:center; gap:7px; width:100%; max-height:260px; overflow-y:auto; padding:2px 4px; }
 .char-card {
   display:flex; flex-direction:column; align-items:center; gap:3px;
-  padding:7px 8px 9px; border-radius:12px; cursor:pointer; width:126px;
+  padding:7px 8px 9px; border-radius:12px; cursor:pointer; width:110px;
   border:2px solid rgba(255,255,255,.12); background:rgba(0,10,40,.55);
   transition:border-color .18s,background .18s,box-shadow .18s;
 }
@@ -108,6 +109,8 @@ const CHARACTERS=[
   {name:'배찌',  tag:'RANGER',   desc:'사거리 최강형',      col:'#cc2200',
    speed:2.0, range:4, maxB:1, stars:{spd:2,rng:5,bub:2}},
 ];
+
+
 let selectedChar=0;
 
 const cv=document.getElementById('c');
@@ -157,17 +160,8 @@ function isBossStage(stg){ return stg%5===0; }
 
 function initGrid(stg){
   grid=Array.from({length:ROWS},()=>new Uint8Array(COLS));
-
-  // 항상 고정: 테두리 벽
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++)
-    if(x===0||y===0||x===COLS-1||y===ROWS-1) grid[y][x]=MW;
-
-  // 스테이지마다 다른 내부 기둥 패턴 (even/even 위치에서 랜덤 선택)
-  // tileRng seed = stg*7 → 스테이지마다 완전히 다른 배치
-  const wallKeepProb = isBossStage(stg) ? 0 : 0.72; // 보스 스테이지는 기둥 없음
-  for(let y=2;y<ROWS-1;y+=2) for(let x=2;x<COLS-1;x+=2){
-    if(tileRng(x,y,stg*7)<wallKeepProb) grid[y][x]=MW;
-  }
+    if(x===0||y===0||x===COLS-1||y===ROWS-1||(x%2===0&&y%2===0)) grid[y][x]=MW;
 
   const safe=new Set(['1,1','2,1','1,2','3,1','1,3','13,1','12,1','13,2','11,1','13,3',
     '1,11','2,11','1,10','3,11','1,9','13,11','12,11','13,10','11,11','13,9']);
@@ -232,20 +226,17 @@ function moveChar(ch,dx,dy){
   if(dx!==0){
     const nx=ch.px+dx*S;
     const tcy=Math.floor(ch.py/T)*T+T/2;
-    const ay=ch.py+(tcy-ch.py)*0.62;
+    const ay=ch.py+(tcy-ch.py)*0.45;
     const ex=nx+dx*R,gxe=Math.floor(ex/T);
-    // 핵심 수정: 정렬 보정된 ay 대신 실제 현재 ch.py로 행 충돌 계산
-    // (ay가 타일 경계 근처에서 다음 행으로 넘어가 벽을 잘못 감지하는 버그 수정)
-    const t1=Math.floor((ch.py-R+1)/T),t2=Math.floor((ch.py+R-1)/T);
+    const t1=Math.floor((ay-R+1)/T),t2=Math.floor((ay+R-1)/T);
     if(!solid(gxe,t1)&&!solid(gxe,t2)){ ch.px=nx;ch.py=ay;ch.dir=dx<0?2:3;ch.animTick++; }
   }
   if(dy!==0){
     const ny=ch.py+dy*S;
     const tcx=Math.floor(ch.px/T)*T+T/2;
-    const ax=ch.px+(tcx-ch.px)*0.62;
-    const ey=ny+dy*R,gye=Math.floor(ey/T);
-    // 핵심 수정: 정렬 보정된 ax 대신 실제 현재 ch.px로 열 충돌 계산
-    const l=Math.floor((ch.px-R+1)/T),r=Math.floor((ch.px+R-1)/T);
+    const ax=ch.px+(tcx-ch.px)*0.45;
+    const ey=ny+dy*S,gye=Math.floor(ey/T);
+    const l=Math.floor((ax-R+1)/T),r=Math.floor((ax+R-1)/T);
     if(!solid(l,gye)&&!solid(r,gye)){ ch.py=ny;ch.px=ax;ch.dir=dy<0?0:1;ch.animTick++; }
   }
   ch.px=Math.max(T/2,Math.min(GW-T/2,ch.px));
@@ -331,45 +322,18 @@ function aiUpdate(en){
   const cx=en.gx*T+T/2,cy=en.gy*T+T/2;
   const atCenter=Math.abs(en.px-cx)<en.speed+1&&Math.abs(en.py-cy)<en.speed+1;
   en.aiTimer--;
-
   if(atCenter&&en.aiTimer<=0){
+    en.aiTimer=ri(12,28);
     const DIRS=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
-
-    // 감지 범위: 스테이지가 높을수록 넓어짐 (3칸~8칸)
-    const detectTiles=Math.min(8, 3+Math.floor(stage/3));
-    const distToPlayer=Math.abs(player.px-cx)+Math.abs(player.py-cy);
-    const chasing=player.alive && distToPlayer<=detectTiles*T;
-
-    if(chasing){
-      // 추적 모드: 보스처럼 플레이어 방향 점수화
-      // 랜덤성은 스테이지가 높을수록 줄어듦 (더 스마트해짐)
-      const randFactor=Math.max(10, 130-stage*10);
-      const scored=DIRS.map(d=>{
-        const nx=en.gx+d.x,ny=en.gy+d.y;
-        if(solid(nx,ny)) return null;
-        const dist=Math.abs(player.px-(nx*T+T/2))+Math.abs(player.py-(ny*T+T/2));
-        const fire=hasFire(nx,ny)?400:0;
-        return{d,v:-dist-fire+Math.random()*randFactor};
-      }).filter(Boolean);
-      scored.sort((a,b)=>b.v-a.v);
-      if(scored.length){en.aiDir=scored[0].d;en.px=cx;en.py=cy;}
-      // 추적 중엔 짧은 타이머 (빠른 반응)
-      en.aiTimer=Math.max(3, ri(4,12)-Math.floor(stage/4));
-    } else {
-      // 배회 모드: 현재 방향 유지하며 랜덤 이동 (항상 움직임)
-      shuffle(DIRS);
-      const ordered=[en.aiDir,...DIRS.filter(d=>!(d.x===en.aiDir.x&&d.y===en.aiDir.y))];
-      const safeDirs=ordered.filter(d=>!solid(en.gx+d.x,en.gy+d.y)&&!hasFire(en.gx+d.x,en.gy+d.y));
-      const okDirs=ordered.filter(d=>!solid(en.gx+d.x,en.gy+d.y));
-      const pick=safeDirs.length?safeDirs[0]:okDirs.length?okDirs[0]:null;
-      if(pick){en.aiDir=pick;en.px=cx;en.py=cy;}
-      // 배회 타이머도 최대 16으로 줄여서 멈춤 없애기
-      en.aiTimer=ri(5,16);
-    }
+    shuffle(DIRS);
+    const ordered=[en.aiDir,...DIRS.filter(d=>!(d.x===en.aiDir.x&&d.y===en.aiDir.y))];
+    const safe=ordered.filter(d=>!solid(en.gx+d.x,en.gy+d.y)&&!hasFire(en.gx+d.x,en.gy+d.y));
+    const ok=ordered.filter(d=>!solid(en.gx+d.x,en.gy+d.y));
+    const pick=safe.length?safe[0]:ok.length?ok[0]:null;
+    if(pick){en.aiDir=pick;en.px=cx;en.py=cy;}
   }
   moveChar(en,en.aiDir.x,en.aiDir.y);
-  // 막힌 경우 즉시 다음 방향 선택 (멈춤 방지)
-  if(Math.abs(en.px-cx)<0.5&&Math.abs(en.py-cy)<0.5&&atCenter) en.aiTimer=0;
+  if(Math.abs(en.px-cx)<1&&Math.abs(en.py-cy)<1&&atCenter) en.aiTimer=0;
 }
 
 // ════════════════════════════════════════
@@ -445,8 +409,7 @@ const SPAWN_CONFIGS=[
 function newStage(){
   bubbles=[];exps=[];drops=[];parts=[];
   initGrid(stage);
-  const ch=CHARACTERS[selectedChar];
-  player=mkChar(1,1,ch.speed,ch.range,ch.maxB,'#ff5599');
+  const _ch=CHARACTERS[selectedChar]; player=mkChar(1,1,_ch.speed,_ch.range,_ch.maxB,_ch.col);
   boss=null;
 
   if(isBossStage(stage)){
@@ -730,10 +693,7 @@ function draw(){
   // Player
   if(player.alive){
     const blink=player.invTimer>0&&Math.floor(fr/5)%2===0;
-    if(!blink){
-      const dp=[drawPlayerBlue,drawPlayerGreen,drawPlayerPink,drawPlayer][selectedChar]||drawPlayer;
-      dp(player.px,player.py,player.animTick,player.dir);
-    }
+    if(!blink) drawPlayer(player.px,player.py,player.animTick,player.dir);
   }
 
   // Stage clear overlay
@@ -1023,128 +983,95 @@ function drawBossHPBar(px,py,hp,maxHp,phase,bossScale){
 // ════════════════════════════════════════
 //  Draw — Player (red bear)
 // ════════════════════════════════════════
+
 function drawPlayer(px,py,tick,dir){
+  const ch=CHARACTERS[selectedChar];
   const bob=Math.sin(tick*.35)*2;
   ctx.save();ctx.translate(px,py-2+bob);
 
-  // Shadow
-  ctx.beginPath();ctx.ellipse(0,22,13,4,0,0,Math.PI*2);
+  ctx.beginPath();ctx.ellipse(0,21,14,4.5,0,0,Math.PI*2);
   ctx.fillStyle='rgba(0,0,0,.22)';ctx.fill();
 
-  // Body (chubby red bear suit)
-  const bodyG=ctx.createRadialGradient(-4,0,1,0,5,15);
-  bodyG.addColorStop(0,'#ee3311');bodyG.addColorStop(1,'#aa1100');
-  ctx.beginPath();ctx.ellipse(0,7,12,11,0,0,Math.PI*2);
-  ctx.fillStyle=bodyG;ctx.fill();ctx.strokeStyle='#881100';ctx.lineWidth=1.5;ctx.stroke();
-
-  // White belly oval
-  ctx.fillStyle='#fff5ee';
-  ctx.beginPath();ctx.ellipse(0,9,7.5,8.5,0,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(200,150,120,.15)';ctx.lineWidth=.7;ctx.stroke();
-
-  // Stubby arms (crossed in front)
-  for(const[ax,angle,cx,cy] of[[-13,-0.25,-14,13],[13,0.25,14,13]]){
-    ctx.fillStyle='#cc2200';
-    ctx.beginPath();ctx.ellipse(ax,4,4.5,7,angle,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#881100';ctx.lineWidth=1;ctx.stroke();
-    // Paw
+  for(const[lx,la] of[[-6,-.12],[6,.12]]){
     ctx.fillStyle='#bb1a00';
-    ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#881100';ctx.lineWidth=.8;ctx.stroke();
+    ctx.beginPath();ctx.ellipse(lx,16,5.5,7,la,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#881200';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#991100';
+    ctx.beginPath();ctx.ellipse(lx+la*6,21,6.5,4.5,la*.4,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#661100';ctx.lineWidth=.8;ctx.stroke();
+    ctx.fillStyle='#771000';
+    for(let t=-1;t<=1;t++){ctx.beginPath();ctx.arc(lx+la*6+t*2.2,22.5,1.1,0,Math.PI*2);ctx.fill();}
   }
 
-  // Bow tie (blue ribbon, prominent)
-  const eo=dir===2?-3:dir===3?3:0;
-  ctx.strokeStyle='#0033aa';ctx.lineWidth=.9;
-  for(const[sign] of[[-1],[1]]){
-    ctx.fillStyle='#1155ee';
-    ctx.beginPath();ctx.moveTo(sign*10,-3+eo*.1);ctx.lineTo(sign*1.5,0);ctx.lineTo(sign*10,3+eo*.1);ctx.closePath();
-    ctx.fill();ctx.stroke();
-  }
-  const bkG=ctx.createRadialGradient(0,-1,.5,0,0,4);
-  bkG.addColorStop(0,'#5599ff');bkG.addColorStop(1,'#2255cc');
-  ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fillStyle=bkG;ctx.fill();
-  ctx.strokeStyle='#0033aa';ctx.lineWidth=.8;ctx.stroke();
+  const bodyG=ctx.createRadialGradient(-4,-1,1,0,4,15);
+  bodyG.addColorStop(0,'#ee3311');bodyG.addColorStop(1,'#aa1100');
+  ctx.beginPath();ctx.ellipse(0,4,13,12,0,0,Math.PI*2);
+  ctx.fillStyle=bodyG;ctx.fill();ctx.strokeStyle='#881100';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff8f4';ctx.beginPath();ctx.ellipse(0,6,8,8,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(200,120,100,.2)';ctx.lineWidth=.8;ctx.stroke();
 
-  // Head (big round red bear hood)
-  const headG=ctx.createRadialGradient(-5,-18,2,0,-13,20);
+  ctx.strokeStyle='#0a2a88';ctx.lineWidth=.8;
+  for(const[pts,ci] of[[[[-8,-3],[-1,0],[-8,3]],'#1144cc'],[[[8,-3],[1,0],[8,3]],'#1144cc']]){
+    ctx.fillStyle=ci;ctx.beginPath();ctx.moveTo(...pts[0]);ctx.lineTo(...pts[1]);ctx.lineTo(...pts[2]);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  const bkG=ctx.createRadialGradient(-1,-1,.5,0,0,3.5);
+  bkG.addColorStop(0,'#5588ff');bkG.addColorStop(1,'#2255cc');
+  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fillStyle=bkG;ctx.fill();
+  ctx.strokeStyle='#0a2a88';ctx.lineWidth=.8;ctx.stroke();
+
+  for(const[ax,angle] of[[-14,-.22],[14,.22]]){
+    ctx.fillStyle='#cc2200';ctx.beginPath();ctx.ellipse(ax,2,5,8,angle,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#881100';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#aa1100';ctx.beginPath();ctx.arc(ax+Math.sin(angle)*6,9,5,0,Math.PI*2);ctx.fill();
+  }
+
+  const headG=ctx.createRadialGradient(-5,-18,2,0,-13,19);
   headG.addColorStop(0,'#ff3311');headG.addColorStop(1,'#cc1100');
-  ctx.beginPath();ctx.arc(0,-13,18,0,Math.PI*2);
-  ctx.fillStyle=headG;ctx.fill();ctx.strokeStyle='#881100';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-13,18,0,Math.PI*2);ctx.fillStyle=headG;ctx.fill();
+  ctx.strokeStyle='#881100';ctx.lineWidth=1.5;ctx.stroke();
 
-  // Bear ears (round bumps)
   for(const[ex,ey] of[[-12,-27],[12,-27]]){
-    ctx.fillStyle='#cc2200';ctx.beginPath();ctx.arc(ex,ey,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#cc2200';ctx.beginPath();ctx.arc(ex,ey,8.5,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle='#881100';ctx.lineWidth=1.2;ctx.stroke();
-    ctx.fillStyle='#ee3311';ctx.beginPath();ctx.arc(ex,ey,6,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,180,150,.2)';ctx.beginPath();ctx.arc(ex-1,ey-1,3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff4422';ctx.beginPath();ctx.arc(ex,ey,5.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,200,180,.3)';ctx.beginPath();ctx.arc(ex-1.5,ey-1.5,3,0,Math.PI*2);ctx.fill();
   }
 
-  // Muzzle (cream oval, lower face — draw BEFORE eyes so eyes sit on top)
-  const muzzleG=ctx.createRadialGradient(0,-7,1,0,-6,13);
-  muzzleG.addColorStop(0,'#fff0dd');muzzleG.addColorStop(1,'#f0d4a8');
-  ctx.beginPath();ctx.ellipse(0,-6,11,9,0,0,Math.PI*2);
-  ctx.fillStyle=muzzleG;ctx.fill();
-  ctx.strokeStyle='rgba(160,100,60,.2)';ctx.lineWidth=.8;ctx.stroke();
+  const muzzleG=ctx.createRadialGradient(0,-7,1,0,-8,12);
+  muzzleG.addColorStop(0,'#ffe8cc');muzzleG.addColorStop(1,'#f5d4b0');
+  ctx.beginPath();ctx.ellipse(0,-8,11,9,0,0,Math.PI*2);ctx.fillStyle=muzzleG;ctx.fill();
+  ctx.strokeStyle='rgba(180,110,70,.2)';ctx.lineWidth=.8;ctx.stroke();
 
-  // Eyes — draw white first
-  const EX=[-7+eo,7+eo],EY=-18,ER=7.5;
+  const eo=dir===2?-3:dir===3?3:0;
+  const EX=[-7+eo,7+eo],EY=-16,ER=7.5;
   for(const ex of EX){
-    ctx.fillStyle='rgba(0,0,0,.08)';ctx.beginPath();ctx.arc(ex,EY,ER+1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.1)';ctx.beginPath();ctx.arc(ex,EY,ER+1,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,EY,ER,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#332222';ctx.lineWidth=.8;ctx.stroke();
-    // Iris (dark maroon, shifted down — peeks below heavy lid)
-    ctx.fillStyle='#5a1200';ctx.beginPath();ctx.arc(ex,EY+1.5,5.5,0,Math.PI*2);ctx.fill();
-    // Pupil
-    ctx.fillStyle='#1a0000';ctx.beginPath();ctx.arc(ex,EY+2,3.2,0,Math.PI*2);ctx.fill();
-    // Eye shine (in the visible lower portion below the lid)
-    ctx.fillStyle='rgba(255,255,255,.85)';
-    ctx.beginPath();ctx.arc(ex+2,EY+2,1.8,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(ex-2,EY+3.5,1,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#6b1200';ctx.beginPath();ctx.arc(ex,EY+.5,5.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a0000';ctx.beginPath();ctx.arc(ex,EY+.5,3.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex+1.5,EY-2,2.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex-2.8,EY+1.5,1.1,0,Math.PI*2);ctx.fill();
   }
-
-  // HEAVY RED EYELIDS — the signature feature; covers ~60% from top
-  // anticlockwise=FALSE → clockwise arc from (π-theta) to theta = TOP arc through 12 o'clock
-  const theta=0.02; // ~50% coverage: lid bottom sits right at eye center
   for(const ex of EX){
     ctx.fillStyle='#cc1100';
-    ctx.beginPath();
-    // moveTo = start of arc (left side, slightly below center)
-    ctx.moveTo(ex+Math.cos(Math.PI-theta)*(ER+.5), EY+Math.sin(theta)*(ER+.5));
-    ctx.arc(ex,EY,ER+.5,Math.PI-theta,theta,false); // false=clockwise = sweeps over the TOP
-    ctx.closePath();ctx.fill();
-    // Lid edge line
-    ctx.strokeStyle='#991100';ctx.lineWidth=1.6;
-    ctx.beginPath();ctx.arc(ex,EY,ER+.5,Math.PI-theta,theta,false);ctx.stroke();
-    // Lid sheen (upper portion, visible as slight highlight on the lid)
-    ctx.fillStyle='rgba(255,60,30,.14)';
-    ctx.beginPath();ctx.ellipse(ex,EY-ER*.5,ER*.52,ER*.2,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(ex-ER-.5,EY+1.5);ctx.arc(ex,EY,ER+.5,Math.PI+.15,-.15,true);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#991100';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ex,EY,ER+.5,Math.PI+.15,-.15,true);ctx.stroke();
   }
 
-  // Nose (small oval at top of muzzle)
-  ctx.fillStyle='#330000';
-  ctx.beginPath();ctx.ellipse(0,-13,3,2.2,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(255,180,140,.35)';
-  ctx.beginPath();ctx.arc(-1,-13.5,1,0,Math.PI*2);ctx.fill();
-
-  // Mouth (small neutral "w" inside muzzle)
-  ctx.strokeStyle='#442200';ctx.lineWidth=1.5;ctx.lineCap='round';
-  ctx.beginPath();
-  ctx.moveTo(-5,-5);ctx.quadraticCurveTo(-2.5,-3,0,-5);
-  ctx.quadraticCurveTo(2.5,-3,5,-5);
-  ctx.stroke();
-
-  // Cheek blush (subtle)
-  ctx.fillStyle='rgba(230,80,50,.12)';
-  ctx.beginPath();ctx.ellipse(-13,-14,5,3,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(13,-14,5,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#330000';ctx.beginPath();ctx.ellipse(0,-4,3.5,2.5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,180,150,.35)';ctx.beginPath();ctx.arc(-1.2,-4.5,1.2,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#440000';ctx.lineWidth=1.6;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,-1.5);ctx.lineTo(0,-.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-4,.5);ctx.quadraticCurveTo(0,3.5,4,.5);ctx.stroke();
+  ctx.fillStyle='rgba(220,80,50,.15)';
+  ctx.beginPath();ctx.ellipse(-12,-11,5.5,3.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(12,-11,5.5,3.5,0,0,Math.PI*2);ctx.fill();
 
   ctx.restore();
 }
 
-// ════════════════════════════════════════
-//  Draw — Enemies (4 types)
-// ════════════════════════════════════════
+
 function drawMob(px,py,col,tick,dir,hit,type){
   ctx.save();ctx.translate(px,py);
   const eo=dir===2?-2:dir===3?2:0;
@@ -1156,245 +1083,71 @@ function drawMob(px,py,col,tick,dir,hit,type){
 }
 
 function drawSlime(col,eo,hit,tick){
-  // Irregular blob with 3 eyes and jagged teeth
-  const w=Math.sin(tick*.22)*.06, w2=Math.cos(tick*.17)*.05;
-  // Shadow
-  ctx.beginPath();ctx.ellipse(0,17,15,4.5,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.22)';ctx.fill();
-  // Slime drips
-  const dc=hit?'#fff':darken(col,.12);ctx.fillStyle=dc;
-  for(const[dx,dph] of[[-7,0],[0,1.2],[7,2.5]]){
-    const dh=6+Math.abs(Math.sin(tick*.14+dph))*4;
-    ctx.beginPath();ctx.ellipse(dx,14,2.5,dh,0,0,Math.PI*2);ctx.fill();
-  }
-  // Main body (lumpy irregular blob)
-  const bg=ctx.createRadialGradient(-5,-5,2,0,0,18);
+  const sq=1+Math.sin(tick*.3)*.07;
+  ctx.beginPath();ctx.ellipse(0,16*sq,13*sq,4,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.2)';ctx.fill();
+  const bg=ctx.createRadialGradient(-5*sq,-6/sq,1,0,0,17);
   bg.addColorStop(0,hit?'#fff':lighten(col,.45));bg.addColorStop(1,hit?'#fff':col);
-  ctx.beginPath();
-  ctx.moveTo(0,-17*(1+w));
-  ctx.bezierCurveTo(11*(1+w2),-15,18,-4,17*(1+w),6);
-  ctx.bezierCurveTo(15,14,7,16,0,15);
-  ctx.bezierCurveTo(-7,16,-15,14,-17*(1+w),6);
-  ctx.bezierCurveTo(-18,-4,-11*(1+w2),-15,0,-17*(1+w));
-  ctx.fillStyle=bg;ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,.22)';
-  ctx.beginPath();ctx.ellipse(-5,-8,8,5,-.35,0,Math.PI*2);ctx.fill();
-  // THREE EYES (3 different sizes for unsettling look)
-  for(const[ex,ey,er] of [[-7+eo,-2,5.5],[6+eo,-5,4.5],[0+eo,-9,3.8]]){
-    ctx.fillStyle=hit?'#fff':'#ffe044';
-    ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=.8;ctx.stroke();
-    ctx.fillStyle='#110000';ctx.beginPath();ctx.arc(ex,ey,er*.6,0,Math.PI*2);ctx.fill();
-    // vertical slit pupil
-    ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(ex,ey,er*.18,er*.52,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.arc(ex+er*.3,ey-er*.3,er*.22,0,Math.PI*2);ctx.fill();
-  }
-  // Jagged mouth with teeth
-  ctx.fillStyle='#220000';
-  ctx.beginPath();ctx.moveTo(-10+eo,5);
-  for(let i=0;i<5;i++){
-    const tx=-10+eo+i*5;
-    ctx.lineTo(tx+2.5,i%2===0?10:5);
-  }
-  ctx.lineTo(10+eo,5);ctx.lineTo(8+eo,13);ctx.lineTo(-8+eo,13);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1;ctx.stroke();
-  // White teeth triangles
-  ctx.fillStyle='#e8e8cc';
-  for(let i=0;i<5;i++){
-    const tx=-10+eo+i*5;
-    if(i%2===0){
-      ctx.beginPath();ctx.moveTo(tx,5);ctx.lineTo(tx+2.5,10);ctx.lineTo(tx+5,5);ctx.fill();
-    }
-  }
+  ctx.beginPath();ctx.ellipse(0,2/sq,16*sq,16/sq,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.22)';ctx.beginPath();ctx.ellipse(-5,-6/sq,8,6/sq,-.3,0,Math.PI/1.8);ctx.fill();
+  ctx.fillStyle=hit?'#fff':col;ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;
+  for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*7-3,-14/sq);ctx.lineTo(i*7,-20/sq);ctx.lineTo(i*7+3,-14/sq);ctx.closePath();ctx.fill();ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-5+eo,-4,5.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-4,5.5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#222';ctx.lineWidth=1;ctx.beginPath();ctx.arc(-5+eo,-4,5.5,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(5+eo,-4,5.5,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#222';ctx.beginPath();ctx.arc(-5+eo,-4,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-4,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-4+eo,-5.5,1.2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6+eo,-5.5,1.2,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(eo,6,5,.3,Math.PI-.3);ctx.stroke();
 }
 
 function drawGhost(col,eo,hit,tick){
-  // Skull-faced wraith with hollow eye sockets and wispy tail
-  const wt=tick*.11;
-  ctx.translate(0,Math.sin(tick*.18)*2);
-  // Wispy faint shadow
-  ctx.beginPath();ctx.ellipse(0,18,8,2,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.08)';ctx.fill();
-  // Outer glow aura
-  const glow=ctx.createRadialGradient(0,-2,5,0,-2,24);
-  glow.addColorStop(0,'rgba(255,255,255,0)');glow.addColorStop(.7,col+'28');glow.addColorStop(1,col+'00');
-  ctx.beginPath();ctx.arc(0,-2,24,0,Math.PI*2);ctx.fillStyle=glow;ctx.fill();
-  // Body with wispy tail
-  const bg=ctx.createRadialGradient(-4,-9,2,0,-4,17);
-  bg.addColorStop(0,hit?'#fff':lighten(col,.55));bg.addColorStop(1,hit?'#eee':col+'dd');
-  ctx.beginPath();ctx.moveTo(0,-20);
-  ctx.bezierCurveTo(14,-20,16,-8,15,4);
-  ctx.lineTo(15,10);
-  // 4 wispy bottom tendrils
-  for(let i=3;i>=0;i--){
-    const xr=15-i*10,xl=15-(i+1)*10,mx=(xr+xl)/2;
-    ctx.quadraticCurveTo(mx,15+Math.sin(wt+i)*.5,xl,10);
-  }
-  ctx.bezierCurveTo(-16,-8,-14,-20,0,-20);
-  ctx.fillStyle=bg;ctx.fill();
-  ctx.strokeStyle='rgba(200,180,255,.25)';ctx.lineWidth=1;ctx.stroke();
-  // HOLLOW EYE SOCKETS (dark, skull-like — no white eyes, just dark holes with glowing pupils)
-  for(const ex of[-6+eo,5+eo]){
-    // Dark sunken socket
-    ctx.fillStyle='rgba(0,0,0,.75)';
-    ctx.beginPath();ctx.ellipse(ex,-9,6.5,8,ex<0?.15:-.15,0,Math.PI*2);ctx.fill();
-    // Inner glow rim
-    ctx.strokeStyle=hit?'rgba(255,255,255,.3)':col+'88';ctx.lineWidth=1;
-    ctx.beginPath();ctx.ellipse(ex,-9,6.5,8,ex<0?.15:-.15,0,Math.PI*2);ctx.stroke();
-    // Glowing pupils
-    const pc=hit?'#ffffff':lighten(col,.6);
-    ctx.shadowColor=pc;ctx.shadowBlur=10;
-    ctx.fillStyle=pc;
-    ctx.beginPath();ctx.arc(ex+eo*.2,-9,2.8,0,Math.PI*2);ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(255,255,255,.85)';
-    ctx.beginPath();ctx.arc(ex+eo*.2+1,-10.5,1,0,Math.PI*2);ctx.fill();
-  }
-  // Skeletal grin (horizontal dark slash)
-  ctx.fillStyle='rgba(0,0,0,.65)';
-  ctx.beginPath();ctx.moveTo(-7+eo,3);ctx.lineTo(7+eo,3);ctx.lineTo(7+eo,6);ctx.lineTo(-7+eo,6);ctx.closePath();ctx.fill();
-  // Teeth in the grin
-  ctx.fillStyle='rgba(255,255,255,.8)';
-  for(let i=0;i<4;i++){
-    const tx=-6+eo+i*3.5;
-    ctx.beginPath();ctx.moveTo(tx,3);ctx.lineTo(tx,6);ctx.lineTo(tx+2.5,6);ctx.lineTo(tx+2.5,3);ctx.closePath();ctx.fill();
-  }
-  // Trailing wisps
-  ctx.strokeStyle=col+'55';ctx.lineWidth=1.5;ctx.lineCap='round';
-  for(const[wx,wph] of[[-8,0],[8,1.5]]){
-    ctx.beginPath();ctx.moveTo(wx,12);
-    ctx.quadraticCurveTo(wx+Math.sin(wt+wph)*4,18,wx*1.3,22+Math.sin(wt+wph)*3);ctx.stroke();
-  }
+  const wt=tick*.12;
+  ctx.beginPath();ctx.ellipse(0,17,9,2.5,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.1)';ctx.fill();
+  const bg=ctx.createRadialGradient(-5,-8,2,0,-2,18);
+  bg.addColorStop(0,hit?'#fff':lighten(col,.5));bg.addColorStop(1,hit?'#fff':col);
+  ctx.beginPath();ctx.arc(0,-4,15,Math.PI,0);ctx.lineTo(15,10);
+  for(let i=2;i>=0;i--){const xr=15-i*10,xl=15-(i+1)*10,mx=(xr+xl)/2;ctx.quadraticCurveTo(mx,10+5+Math.sin(wt+i)*1.5,xl,10);}
+  ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1.5;ctx.stroke();
+  const glow=ctx.createRadialGradient(0,0,8,0,0,22);
+  glow.addColorStop(0,'rgba(255,255,255,0)');glow.addColorStop(1,col+'33');
+  ctx.beginPath();ctx.arc(0,-2,22,0,Math.PI*2);ctx.fillStyle=glow;ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-5+eo,-7,5.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-7,5.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1a0044';ctx.beginPath();ctx.arc(-5+eo,-7,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-7,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-4+eo,-8.5,1.2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6+eo,-8.5,1.2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(-3,3);ctx.lineTo(-1,7);ctx.lineTo(1,3);ctx.fill();ctx.beginPath();ctx.moveTo(2,3);ctx.lineTo(4,7);ctx.lineTo(6,3);ctx.fill();
 }
 
 function drawDevil(col,eo,hit,tick){
-  // Demon with bat wings, curved horns, angular face, fanged open mouth
   const bounce=Math.sin(tick*.25)*1.5;ctx.translate(0,bounce);
-  ctx.beginPath();ctx.ellipse(0,17,14,4.5,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.22)';ctx.fill();
-  // Bat wings (behind body)
-  if(!hit){
-    const flap=Math.sin(tick*.3)*.12;
-    for(const side of[-1,1]){
-      ctx.fillStyle=darken(col,.4);
-      ctx.beginPath();
-      ctx.moveTo(side*12,-2);
-      ctx.bezierCurveTo(side*(20+flap*8),-14,side*28,-3,side*24,6);
-      ctx.bezierCurveTo(side*22,9,side*18,3,side*12,5);
-      ctx.closePath();ctx.fill();
-      ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;ctx.stroke();
-      // Wing membrane veins
-      ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=.7;
-      ctx.beginPath();ctx.moveTo(side*12,0);ctx.lineTo(side*23,4);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(side*12,-1);ctx.lineTo(side*22,-7);ctx.stroke();
-    }
-  }
-  // Curved horns
-  const hc=hit?'#fff':darken(col,.25);
-  ctx.fillStyle=hc;ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1.2;
-  for(const side of[-1,1]){
-    ctx.beginPath();
-    ctx.moveTo(side*8,-14);
-    ctx.bezierCurveTo(side*13,-20,side*11,-30,side*7,-27);
-    ctx.bezierCurveTo(side*4,-24,side*5,-16,side*4,-13);
-    ctx.closePath();ctx.fill();ctx.stroke();
-  }
-  // Body (angular, not circular)
-  const bg=ctx.createRadialGradient(-4,-7,1,0,0,17);
-  bg.addColorStop(0,hit?'#fff':lighten(col,.35));bg.addColorStop(1,hit?'#ddd':col);
-  ctx.beginPath();
-  ctx.moveTo(0,-16);ctx.lineTo(13,-8);ctx.lineTo(15,4);
-  ctx.lineTo(9,14);ctx.lineTo(0,16);ctx.lineTo(-9,14);
-  ctx.lineTo(-15,4);ctx.lineTo(-13,-8);ctx.closePath();
-  ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.8;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,.17)';ctx.beginPath();ctx.ellipse(-4,-7,8,6,-.3,0,Math.PI*2);ctx.fill();
-  // Eyes (glowing red with angry shape)
-  for(const ex of[-5+eo,5+eo]){
-    ctx.shadowColor='#ff2200';ctx.shadowBlur=10;
-    ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(ex,-5,6,0,Math.PI*2);ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.fillStyle=hit?'#fff':'#fff';ctx.beginPath();ctx.arc(ex,-5,4.5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#aa0000';ctx.beginPath();ctx.arc(ex,-5,3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#220000';ctx.beginPath();ctx.arc(ex,-5,1.8,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,120,0,.5)';ctx.beginPath();ctx.arc(ex+1,-6,1,0,Math.PI*2);ctx.fill();
-  }
-  // Heavy angry V brows
-  ctx.strokeStyle='#330000';ctx.lineWidth=3;ctx.lineCap='square';
-  ctx.beginPath();ctx.moveTo(-12+eo,-12);ctx.lineTo(-3+eo,-9);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(12+eo,-12);ctx.lineTo(3+eo,-9);ctx.stroke();
-  // Open fanged mouth
-  ctx.fillStyle='#1a0000';
-  ctx.beginPath();ctx.moveTo(-8+eo,5);ctx.arc(eo,8,8,Math.PI+.4,-.4);ctx.lineTo(8+eo,5);ctx.closePath();ctx.fill();
-  // Upper fangs
-  ctx.fillStyle='#eeeecc';
-  for(const[fx,fw] of[[-5+eo,2.5],[0+eo,2.5],[5+eo,2.5]]){
-    ctx.beginPath();ctx.moveTo(fx-fw/2,5);ctx.lineTo(fx,11);ctx.lineTo(fx+fw/2,5);ctx.fill();
-  }
-  // Lower fangs
-  ctx.fillStyle='#ddddbb';
-  for(const[fx,fw] of[[-3+eo,2],[3+eo,2]]){
-    ctx.beginPath();ctx.moveTo(fx-fw/2,15);ctx.lineTo(fx,9);ctx.lineTo(fx+fw/2,15);ctx.fill();
-  }
+  ctx.beginPath();ctx.ellipse(0,16,13,4,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.2)';ctx.fill();
+  const hc=hit?'#fff':darken(col,.3);ctx.fillStyle=hc;
+  ctx.beginPath();ctx.moveTo(-10,-14);ctx.lineTo(-8,-25);ctx.lineTo(-2,-13);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(10,-14);ctx.lineTo(8,-25);ctx.lineTo(2,-13);ctx.closePath();ctx.fill();
+  const bg=ctx.createRadialGradient(-4,-6,1,0,0,17);
+  bg.addColorStop(0,hit?'#fff':lighten(col,.35));bg.addColorStop(1,hit?'#fff':col);
+  ctx.beginPath();ctx.arc(0,2,16,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-5+eo,-4,5.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-4,5.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#cc0000';ctx.beginPath();ctx.arc(-5+eo,-4,3.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-4,3.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-5+eo,-4,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5+eo,-4,2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-4+eo,-5.5,1,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6+eo,-5.5,1,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#550000';ctx.lineWidth=2.5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-10+eo,-11);ctx.lineTo(-3+eo,-9);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(10+eo,-11);ctx.lineTo(3+eo,-9);ctx.stroke();
+  ctx.strokeStyle='#550000';ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(eo,10,6,Math.PI+.3,-.3);ctx.stroke();
 }
 
 function drawFrog(col,eo,hit,tick){
-  // Swamp creature: bulging stalk eyes, wide fanged mouth, warts, forked tongue
-  const hop=Math.abs(Math.sin(tick*.22))*2;ctx.translate(0,-hop);
-  ctx.beginPath();ctx.ellipse(0,17+hop,15,4,0,0,Math.PI*2);ctx.fillStyle=`rgba(0,0,0,${.22-hop*.01})`;ctx.fill();
-  // Wide flat body (reptilian)
-  const bg=ctx.createRadialGradient(-4,0,2,0,2,19);
-  bg.addColorStop(0,hit?'#fff':lighten(col,.38));bg.addColorStop(1,hit?'#ddd':col);
-  ctx.beginPath();
-  ctx.moveTo(0,-13);
-  ctx.bezierCurveTo(10,-13,19,-6,19,4);
-  ctx.bezierCurveTo(19,11,13,16,0,16);
-  ctx.bezierCurveTo(-13,16,-19,11,-19,4);
-  ctx.bezierCurveTo(-19,-6,-10,-13,0,-13);
-  ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=2;ctx.stroke();
-  // Lighter belly
-  ctx.fillStyle='rgba(255,255,255,.17)';ctx.beginPath();ctx.ellipse(0,5,11,8,0,0,Math.PI*2);ctx.fill();
-  // Wart bumps (texture)
-  ctx.fillStyle='rgba(0,0,0,.14)';
-  for(const[wx,wy,wr] of[[-13,-2,3],[-11,6,2.5],[11,-4,2.8],[13,5,2.5],[-5,-10,2.2],[6,-10,2],[0,11,2.3]]){
-    ctx.beginPath();ctx.arc(wx,wy,wr,0,Math.PI*2);ctx.fill();
+  const hop=Math.abs(Math.sin(tick*.25))*2;ctx.translate(0,-hop);
+  ctx.beginPath();ctx.ellipse(0,17+hop,14,4,0,0,Math.PI*2);ctx.fillStyle=`rgba(0,0,0,${.2-hop*.01})`;ctx.fill();
+  const bg=ctx.createRadialGradient(-4,-3,1,0,1,17);
+  bg.addColorStop(0,hit?'#fff':lighten(col,.4));bg.addColorStop(1,hit?'#fff':col);
+  ctx.beginPath();ctx.ellipse(0,3,17,14,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.2)';ctx.beginPath();ctx.ellipse(0,5,10,8,0,0,Math.PI*2);ctx.fill();
+  for(const bx of[-8,8]){
+    ctx.fillStyle=hit?'#fff':col;ctx.beginPath();ctx.arc(bx,-8,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(bx+eo*.5,-8,3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+eo*.5+1,-9.5,1.3,0,Math.PI*2);ctx.fill();
   }
-  // Dark spots pattern
-  ctx.fillStyle=darken(col,.2);
-  for(const[sx,sy,sr] of[[-11,1,3.5],[10,-3,3],[0,-9,2.5],[-5,8,3],[8,8,2.5]]){
-    ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fill();
-  }
-  // EYE STALKS + BULGING EYES (the signature feature — eyes on top of head)
-  for(const[sx,side] of[[-10,-1],[10,1]]){
-    // Stalk
-    ctx.fillStyle=hit?'#fff':darken(col,.05);
-    ctx.beginPath();ctx.ellipse(sx,-11,3,6,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=.8;ctx.stroke();
-    // Eyeball (large, round)
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx+side*eo*.1,-17,7,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1;ctx.stroke();
-    // Yellow-green iris
-    ctx.fillStyle='#aacc00';ctx.beginPath();ctx.arc(sx+side*eo*.15,-17,5.2,0,Math.PI*2);ctx.fill();
-    // Horizontal reptile slit pupil
-    ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(sx+side*eo*.15,-17,1.5,4.5,0,0,Math.PI*2);ctx.fill();
-    // Shine
-    ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.arc(sx+side*eo*.15+2,-18.5,1.8,0,Math.PI*2);ctx.fill();
-  }
-  // Wide gaping mouth
-  ctx.fillStyle='#002200';
-  ctx.beginPath();ctx.moveTo(-13+eo*.3,6);ctx.arc(eo*.3,10,13,Math.PI+.38,-.38);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(-13+eo*.3,6);ctx.arc(eo*.3,10,13,Math.PI+.38,-.38);ctx.stroke();
-  // Jagged teeth
-  ctx.fillStyle='#cccc88';
-  for(let i=0;i<6;i++){
-    const tx=-11+eo*.3+i*4.4;
-    ctx.beginPath();ctx.moveTo(tx,6);ctx.lineTo(tx+2.2,10);ctx.lineTo(tx+4.4,6);ctx.fill();
-  }
-  // Forked tongue flicking out
-  if(Math.sin(tick*.16)>0.4){
-    ctx.fillStyle='#cc1133';
-    ctx.beginPath();ctx.ellipse(eo*.3,16,4,6,0,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(-2.5+eo*.3,22,2.5,4,-.2,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(2.5+eo*.3,22,2.5,4,.2,0,Math.PI*2);ctx.fill();
-  }
+  ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-9,10);ctx.quadraticCurveTo(eo,15,9,10);ctx.stroke();
 }
 
 // ════════════════════════════════════════
@@ -1506,17 +1259,24 @@ function showOver(){
       <div class="records-title">🏅 역대 베스트 5</div>
       ${recsHtml||'<div style="color:#445566;font-size:12px;text-align:center">기록 없음</div>'}
     </div>
-    <div style="display:flex;gap:10px">
-      <button id="sbtn" onclick="startGame()" style="padding:11px 32px;font-size:16px">다시 시작</button>
-      <button onclick="buildTitleScreen()" style="background:linear-gradient(135deg,#334,#223);color:#aabbdd;border:1px solid #446;padding:11px 20px;font-size:14px;border-radius:30px;cursor:pointer;font-weight:bold">캐릭터 변경</button>
-      <button onclick="location.href='index.html${isNewBest?'?newrecord=bubble':''}'" style="background:linear-gradient(135deg,#1a2233,#111a28);color:#7799cc;border:1px solid #2a3a55;padding:11px 20px;font-size:14px;border-radius:30px;cursor:pointer;font-weight:bold">🏠 홈</button>
-    </div>`;
+    <button id="sbtn" onclick="startGame()">다시 시작</button>
+    <button class="back-btn" onclick="buildTitleScreen()">캐릭터 변경</button>`;
   s.classList.remove('hide');
 }
 
 // ════════════════════════════════════════
-//  Character Select UI
+//  Loop
 // ════════════════════════════════════════
+function loop(){
+  if(gs==='play'||gs==='clear') update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+setTimeout(buildTitleScreen, 0);
+
+
+// ════ Character Select ════
 const TAG_COL={BALANCED:'#3366dd',BOMBER:'#22aa44',SPEED:'#ee1188',RANGER:'#cc2200'};
 const BAR_COL={spd:'#ffcc00',rng:'#44aaff',bub:'#aa44ff'};
 const STAT_ICO={spd:'⚡',rng:'💧',bub:'🫧'};
@@ -1797,18 +1557,8 @@ function drawPlayerPink(px,py,tick,dir){
   // Cheeks
   ctx.fillStyle='rgba(255,100,150,.2)';ctx.beginPath();ctx.ellipse(-9,-9,5,3,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(9,-9,5,3,0,0,Math.PI*2);ctx.fill();
   ctx.restore();
-}
+}function drawMiniDogSpotty(pc){ _drawMiniDog(pc,'spotty'); }
 
-// ════════════════════════════════════════
-//  Loop
-// ════════════════════════════════════════
-function loop(){
-  if(gs==='play'||gs==='clear') update();
-  draw();
-  requestAnimationFrame(loop);
-}
-buildTitleScreen();
-loop();
 </script>
 </body>
 </html>
