@@ -388,7 +388,7 @@ footer {
     <div class="card-score">
       <div class="score-icon">🐕</div>
       <div class="score-info">
-        <div class="score-game-name">쿨도그 런!</div>
+        <div class="score-game-name">쿨도그 점프!</div>
         <div class="score-value no-record" id="sv-dragon">기록 없음</div>
         <div class="score-label">BEST SCORE</div>
       </div>
@@ -400,8 +400,8 @@ footer {
     <div class="badge">SHOOTER</div>
     <div class="card-body">
       <div class="card-num">NO.02</div>
-      <div class="card-title">쿨도그 런!</div>
-      <div class="card-sub">COOL DOG RUN</div>
+      <div class="card-title">쿨도그 점프!</div>
+      <div class="card-sub">COOL DOG JUMP</div>
       <div class="card-desc">귀여운 강아지가 신나게 달린다! 뼈다귀를 던져 적을 물리치고 스테이지마다 바뀌는 배경을 즐겨보자.</div>
       <div class="tags">
         <span class="tag">🐕 강아지 조종</span>
@@ -476,7 +476,7 @@ footer {
   </a>
   </div>
 
-  <!-- DOG RUN -->
+  <!-- DOG JUMP -->
   <div class="card-wrap" data-game="run">
     <div class="card-score">
       <div class="score-icon">🏃</div>
@@ -493,14 +493,14 @@ footer {
       <div class="badge">RUNNER</div>
       <div class="card-body">
         <div class="card-num">NO.05</div>
-        <div class="card-title">도그 런!</div>
-        <div class="card-sub">DOG RUN</div>
-        <div class="card-desc">강아지 3종 중 하나를 골라 뛰어라! 고양이와 새를 피해 최대한 멀리 달리자. 점수 150↑ 2단 점프 해금!</div>
+        <div class="card-title">도그 점프!</div>
+        <div class="card-sub">DOG JUMP</div>
+        <div class="card-desc">강아지 3종 중 하나를 골라 플랫폼을 달려라! 구덩이를 뛰어넘고, 뼈다귀를 모으고, 고양이를 밟아 처치하자!</div>
         <div class="tags">
           <span class="tag">🐕 강아지 3종</span>
-          <span class="tag">😼 고양이 장애물</span>
-          <span class="tag">🐦 날아오는 새</span>
-          <span class="tag">🌙 낮/밤 전환</span>
+          <span class="tag">🕳️ 구덩이·발판</span>
+          <span class="tag">😼 고양이 처치</span>
+          <span class="tag">🌙 낮/밤·아이템</span>
         </div>
         <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
       </div>
@@ -572,7 +572,7 @@ footer {
   } catch(e){}
   // 도그 런: dogRunBest_v1
   try {
-    const v = parseInt(localStorage.getItem('dogRunBest_v1')||'0')||0;
+    const v = parseInt(localStorage.getItem('dogJumpBest_v1')||'0')||0;
     if(v>0){ const el=document.getElementById('sv-run'); el.textContent=v.toLocaleString('ko-KR'); el.classList.remove('no-record'); }
   } catch(e){}
 })();
@@ -721,7 +721,7 @@ footer {
   ctx.fillText('캐릭터를 선택하고 몬스터를 물리쳐라!', W/2, H/2+28);
 })();
 
-// COOL DOG RUN preview
+// COOL DOG JUMP preview
 (function(){
   const c=document.getElementById('cv-dragon');
   const ctx=c.getContext('2d');
@@ -810,7 +810,7 @@ footer {
   ctx.fillStyle='rgba(5,20,3,0.35)';ctx.fillRect(0,0,W,H);
   ctx.font='bold 26px "Noto Sans KR",sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff';ctx.shadowColor='#44cc00';ctx.shadowBlur=16;
-  ctx.fillText('쿨도그 런!',W/2,H/2+8);
+  ctx.fillText('쿨도그 점프!',W/2,H/2+8);
   ctx.font='13px "Noto Sans KR"';ctx.fillStyle='#aaffaa';ctx.shadowBlur=0;
   ctx.fillText('강아지와 함께 달려라!',W/2,H/2+28);
 })();
@@ -1004,11 +1004,11 @@ footer {
   // Overlay + title
   ctx.fillStyle='rgba(5,15,30,.3)';ctx.fillRect(0,0,W,H);
   ctx.font='bold 28px Orbitron,monospace';ctx.textAlign='center';
-  ctx.fillStyle='#000';ctx.shadowColor='transparent';ctx.fillText('🐾 도그 런!',W/2+2,H/2+10);
+  ctx.fillStyle='#000';ctx.shadowColor='transparent';ctx.fillText('🐾 도그 점프!',W/2+2,H/2+10);
   ctx.fillStyle='#ffdd44';ctx.shadowColor='#cc8800';ctx.shadowBlur=18;
-  ctx.fillText('🐾 도그 런!',W/2,H/2+8);ctx.shadowBlur=0;
+  ctx.fillText('🐾 도그 점프!',W/2,H/2+8);ctx.shadowBlur=0;
   ctx.font='13px Noto Sans KR,sans-serif';ctx.fillStyle='rgba(255,220,100,.8)';
-  ctx.fillText('장애물을 피해 최대한 멀리!',W/2,H/2+32);
+  ctx.fillText('구덩이를 건너 뼈다귀를 모아라!',W/2,H/2+32);
 })();
 </script>
 </body>
