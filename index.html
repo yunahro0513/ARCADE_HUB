@@ -481,7 +481,7 @@ footer {
     <div class="card-score">
       <div class="score-icon">🏃</div>
       <div class="score-info">
-        <div class="score-game-name">도그 런</div>
+        <div class="score-game-name">도그 점프!</div>
         <div class="score-value no-record" id="sv-run">기록 없음</div>
         <div class="score-label">BEST SCORE</div>
       </div>
@@ -570,7 +570,7 @@ footer {
       el.classList.remove('no-record');
     }
   } catch(e){}
-  // 도그 런: dogRunBest_v1
+  // 도그 점프!: dogRunBest_v1
   try {
     const v = parseInt(localStorage.getItem('dogJumpBest_v1')||'0')||0;
     if(v>0){ const el=document.getElementById('sv-run'); el.textContent=v.toLocaleString('ko-KR'); el.classList.remove('no-record'); }
