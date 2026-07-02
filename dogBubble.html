@@ -92,11 +92,14 @@ h1 { color:#88ee44 !important; text-shadow:0 0 22px #44aa00 !important; }
 #sbtn { background:linear-gradient(135deg,#3a9a10,#5acc20) !important; box-shadow:0 4px 18px #2a7a0888 !important; }
 #sbtn:hover { background:linear-gradient(135deg,#4ab820,#6edd30) !important; }
 .sdesc b { color:#aaee66 !important; }
+#pauseBtn{position:absolute;top:10px;right:10px;width:34px;height:34px;background:rgba(0,0,0,0.45);color:#fff;border:1.5px solid rgba(255,255,255,0.35);border-radius:50%;font-size:15px;cursor:pointer;z-index:15;display:none;line-height:1;transition:background .15s;}
+#pauseBtn:hover{background:rgba(255,255,255,0.25);}
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
+  <button id="pauseBtn" onclick="togglePause()">⏸</button>
   <div id="screen"></div>
 </div>
 <script>
@@ -187,7 +190,14 @@ document.getElementById('wrap').style.cssText=`width:${CW}px;height:${CH}px`;
 // ════════════════════════════════════════
 const keys={};
 let spaceJust=false;
+let paused=false;
+function togglePause(){
+  if(gs!=='play'&&gs!=='clear')return;
+  paused=!paused;
+  document.getElementById('pauseBtn').textContent=paused?'▶':'⏸';
+}
 document.addEventListener('keydown',e=>{
+  if(e.code==='Escape'){togglePause();e.preventDefault();return;}
   if(!keys[e.code]&&e.code==='Space') spaceJust=true;
   keys[e.code]=true;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
@@ -458,6 +468,9 @@ function startGame(){
   document.getElementById('screen').classList.add('hide');
   score=0;lives=3;stage=1;fr=0;
   gameStartTime=Date.now();
+  paused=false;
+  const pb=document.getElementById('pauseBtn');
+  pb.style.display='block';pb.textContent='⏸';
   newStage();
 }
 
@@ -763,12 +776,20 @@ function draw(){
 
   // Stage clear overlay
   if(gs==='clear'){
+    const isBoss=isBossStage(stage-1);
     const a=(.5+.5*Math.sin(fr*.18))*.38;
-    ctx.fillStyle=`rgba(80,255,140,${a})`;ctx.fillRect(0,0,GW,GH);
-    ctx.fillStyle='rgba(255,255,255,.92)';ctx.font='bold 38px sans-serif';ctx.textAlign='center';
-    ctx.shadowColor='#00ff88';ctx.shadowBlur=24;
-    const txt=isBossStage(stage-1)?'👑 보스 격파!':'🎉 STAGE CLEAR!';
-    ctx.fillText(txt,GW/2,GH/2);
+    ctx.fillStyle=isBoss?`rgba(255,180,0,${a})`:`rgba(80,255,140,${a})`;
+    ctx.fillRect(0,0,GW,GH);
+    ctx.textAlign='center';
+    if(isBoss){
+      ctx.fillStyle='rgba(255,220,0,.95)';ctx.font='bold 34px sans-serif';
+      ctx.shadowColor='#ff8800';ctx.shadowBlur=28;
+      ctx.fillText('Boss stage clear!!',GW/2,GH/2-6);
+    } else {
+      ctx.fillStyle='rgba(255,255,255,.95)';ctx.font='bold 34px sans-serif';
+      ctx.shadowColor='#00ff88';ctx.shadowBlur=24;
+      ctx.fillText('Stage clear!!',GW/2,GH/2-6);
+    }
     ctx.shadowBlur=0;ctx.textAlign='left';
   }
 
@@ -791,6 +812,13 @@ function draw(){
 
   ctx.restore(); // end translate(0,UI)
   if(shakeTimer>0) ctx.setTransform(1,0,0,1,0,0); // reset shake
+  if(paused){
+    ctx.fillStyle='rgba(0,0,0,0.52)';ctx.fillRect(0,0,CW,CH);
+    ctx.textAlign='center';
+    ctx.fillStyle='#fff';ctx.font='bold 24px sans-serif';ctx.fillText('일시정지',CW/2,CH/2-10);
+    ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='13px sans-serif';ctx.fillText('P · ESC 또는 ▶ 버튼으로 재개',CW/2,CH/2+18);
+    ctx.textAlign='left';
+  }
 }
 
 // ════════════════════════════════════════
@@ -1367,6 +1395,8 @@ function saveRecord(sc,stg,secs){
 //  Overlay
 // ════════════════════════════════════════
 function showOver(){
+  paused=false;
+  document.getElementById('pauseBtn').style.display='none';
   const elapsed=Math.max(0,(Date.now()-gameStartTime)/1000)|0;
   const mm=(elapsed/60)|0,ss=elapsed%60;
   const rank=getRank(score);
@@ -1410,7 +1440,7 @@ function showOver(){
 //  Loop
 // ════════════════════════════════════════
 function loop(){
-  if(gs==='play'||gs==='clear') update();
+  if((gs==='play'||gs==='clear')&&!paused) update();
   draw();
   requestAnimationFrame(loop);
 }
