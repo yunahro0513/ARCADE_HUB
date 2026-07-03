@@ -114,6 +114,7 @@ main {
 .card-wrap[data-game="dog"] { --accent: var(--dog-c); }
 .card[data-game="run"] { --accent: var(--run-c); }
 .card-wrap[data-game="run"] { --accent: var(--run-c); }
+.card-wrap[data-game="dive"] { --accent: #2299ee; }
 
 .card:hover {
   border-color: var(--accent);
@@ -507,6 +508,36 @@ footer {
     </a>
   </div>
 
+  <div class="card-wrap" data-game="dive">
+    <div class="card-score">
+      <div class="score-icon">🤿</div>
+      <div class="score-info">
+        <div class="score-game-name">도그 다이브!</div>
+        <div class="score-value no-record" id="sv-dive">기록 없음</div>
+        <div class="score-label">BEST SCORE</div>
+      </div>
+    </div>
+    <a class="card" data-game="dive" href="dogDive.html">
+      <div class="card-preview">
+        <canvas id="cv-dive" width="400" height="200"></canvas>
+      </div>
+      <div class="badge">DIVER</div>
+      <div class="card-body">
+        <div class="card-num">NO.06</div>
+        <div class="card-title">도그 다이브!</div>
+        <div class="card-sub">DOG DIVE</div>
+        <div class="card-desc">강아지 3종 중 하나를 골라 수중 탐험에 도전! 암초·해파리·기뢰를 피하고 뼈다귀를 모아라. 대왕 상어도 조심!</div>
+        <div class="tags">
+          <span class="tag">🐕 강아지 3종</span>
+          <span class="tag">🪨 암초·해파리</span>
+          <span class="tag">🦈 대왕 상어</span>
+          <span class="tag">🌊 심해 모드</span>
+        </div>
+        <div class="play-btn"><span class="play-icon"></span> 게임 시작</div>
+      </div>
+    </a>
+  </div>
+
 </main>
 
 <footer>
@@ -575,6 +606,76 @@ footer {
     const v = parseInt(localStorage.getItem('dogJumpBest_v1')||'0')||0;
     if(v>0){ const el=document.getElementById('sv-run'); el.textContent=v.toLocaleString('ko-KR'); el.classList.remove('no-record'); }
   } catch(e){}
+  // 도그 다이브: dogDiveBest
+  try {
+    const v = parseInt(localStorage.getItem('dogDiveBest')||'0')||0;
+    if(v>0){ const el=document.getElementById('sv-dive'); el.textContent=v.toLocaleString('ko-KR'); el.classList.remove('no-record'); }
+  } catch(e){}
+})();
+
+// ─── DOG DIVE preview ────────────────────────────────────
+(function(){
+  const c=document.getElementById('cv-dive');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  const W=400,H=200;
+  // Ocean bg
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a4878');bg.addColorStop(1,'#053858');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // Light rays
+  for(let i=0;i<4;i++){
+    const rx=i*110+40;
+    const rg=ctx.createLinearGradient(rx,0,rx+40,H);
+    rg.addColorStop(0,'rgba(100,210,255,0.1)');rg.addColorStop(1,'rgba(100,200,255,0)');
+    ctx.fillStyle=rg;
+    ctx.beginPath();ctx.moveTo(rx-10,0);ctx.lineTo(rx+50,H);ctx.lineTo(rx+20,H);ctx.lineTo(rx-35,0);ctx.fill();
+  }
+  // Bubbles
+  ctx.strokeStyle='rgba(180,235,255,0.25)';ctx.lineWidth=1;
+  [[40,60,8],[120,100,5],[250,40,10],[330,130,6],[180,150,4],[80,170,7]].forEach(([x,y,r])=>{
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+  });
+  // Seaweed
+  [[60,70],[160,60],[280,75],[360,65]].forEach(([sx,sh])=>{
+    ctx.strokeStyle='#2a8040';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(sx,H-10);
+    for(let s=1;s<=5;s++){ctx.lineTo(sx+Math.sin(s*0.6)*8,H-10-s*sh/5);}
+    ctx.stroke();
+  });
+  // Sand
+  ctx.fillStyle='#c0b068';ctx.fillRect(0,H-12,W,12);
+  // Obstacles - rock passage
+  ctx.fillStyle='#3a3e4c';ctx.fillRect(200,0,40,55);ctx.fillRect(200,105,40,95);
+  ctx.fillStyle='#2a2e3c';ctx.fillRect(200,0,40,55);
+  // Jellyfish
+  const jg=ctx.createRadialGradient(320,80,0,320,80,22);
+  jg.addColorStop(0,'rgba(255,210,255,0.9)');jg.addColorStop(1,'rgba(180,80,220,0.35)');
+  ctx.fillStyle=jg;
+  ctx.beginPath();ctx.ellipse(320,80,22,14,0,Math.PI,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(200,80,240,0.4)';ctx.lineWidth=1.5;
+  for(let t=-2;t<=2;t++){ctx.beginPath();ctx.moveTo(320+t*8,80);ctx.lineTo(320+t*8+t*6,110);ctx.stroke();}
+  // Mine
+  ctx.fillStyle='#404050';ctx.beginPath();ctx.arc(120,90,16,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#484858';ctx.lineWidth=3;
+  for(let s=0;s<8;s++){const a=s*Math.PI/4;ctx.beginPath();ctx.moveTo(120+Math.cos(a)*16,90+Math.sin(a)*16);ctx.lineTo(120+Math.cos(a)*26,90+Math.sin(a)*26);ctx.stroke();}
+  ctx.fillStyle='rgba(255,40,40,0.7)';ctx.beginPath();ctx.arc(128,88,3,0,Math.PI*2);ctx.fill();
+  // Dog (simple)
+  ctx.fillStyle='#c88428';ctx.beginPath();ctx.arc(60,95,16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(30,120,210,0.8)';ctx.beginPath();ctx.ellipse(54,91,8,6,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(67,91,8,6,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#ff9944';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(74,91);ctx.quadraticCurveTo(82,91,82,82);ctx.stroke();
+  // Bones
+  ctx.fillStyle='#f0e8d0';
+  [[140,60],[290,130]].forEach(([bx,by])=>{
+    ctx.beginPath();ctx.ellipse(bx,by,7,3.5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx-7,by,4,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx+7,by,4,0,Math.PI*2);ctx.fill();
+  });
+  // Title overlay
+  ctx.fillStyle='rgba(0,20,40,0.4)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(100,210,255,0.9)';ctx.font='bold 28px Orbitron,monospace';ctx.textAlign='center';
+  ctx.fillText('DOG DIVE',W/2,H/2+4);ctx.textAlign='left';
 })();
 
 // ─── Starfield ───────────────────────────────────────────
