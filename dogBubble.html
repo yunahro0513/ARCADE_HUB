@@ -618,14 +618,13 @@ function update(){
 // ════════════════════════════════════════
 function draw(){
   ctx.clearRect(0,0,CW,CH);
+  const isBoss=isBossStage(stage);
   ctx.fillStyle=isBoss?'#f5dde0':'#d4f0c8'; ctx.fillRect(0,UI,CW,CH-UI);
 
   // Screen shake offset
   const sx=shakeTimer>0?(Math.random()-.5)*shakeTimer*1.5:0;
   const sy=shakeTimer>0?(Math.random()-.5)*shakeTimer*1.5:0;
   if(shakeTimer>0) ctx.translate(sx,sy);
-
-  const isBoss=isBossStage(stage);
 
   // ── HUD ──
   const hg=ctx.createLinearGradient(0,0,CW,0);
