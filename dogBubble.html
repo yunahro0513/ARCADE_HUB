@@ -8,7 +8,7 @@
 body {
   background:#000c2a;
   display:flex; justify-content:center; align-items:center;
-  height:100vh; overflow:hidden;
+  min-height:100vh; overflow:auto;
   font-family:'맑은 고딕','Apple SD Gothic Neo',Arial,sans-serif;
 }
 #wrap { position:relative; }
@@ -182,8 +182,9 @@ let selectedChar=0;
 
 const cv=document.getElementById('c');
 cv.width=CW; cv.height=CH;
+cv.style.width=(CW*1.5)+'px'; cv.style.height=(CH*1.5)+'px';
 const ctx=cv.getContext('2d');
-document.getElementById('wrap').style.cssText=`width:${CW}px;height:${CH}px`;
+document.getElementById('wrap').style.cssText=`width:${CW*1.5}px;height:${CH*1.5}px`;
 
 // ════════════════════════════════════════
 //  Input
