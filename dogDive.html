@@ -40,6 +40,7 @@ const CHAR={spdMul:1.35,growMul:0.75,lives:3};
 let gs='title',paused=false;
 let score=0,bestScore=0,fr=0,tick=0;
 let lives=3,invTimer=0,goTick=0;
+let stage=1,stageMsg='',stageMsgTimer=0,bossSpawned=false,finalBossId=-1;
 const cam={x:0,y:0};
 const P={
   x:WW/2,y:WH/2,size:1.0,vx:0,vy:0,
@@ -92,9 +93,20 @@ function spawnFish(tier,near){
     animFrame:0,animTick:0,state:'wander',wanderA:a,wanderT:60+Math.random()*120,
     dead:false,deadT:0});
 }
+function spawnBoss(){
+  const a=Math.random()*Math.PI*2,d=350;
+  const bx=Math.max(120,Math.min(WW-120,P.x+Math.cos(a)*d));
+  const by=Math.max(120,Math.min(WH-120,P.y+Math.sin(a)*d));
+  fish.push({x:bx,y:by,tier:5,size:28,r:110,spd:0.55,
+    col:'#220044',pts:2000,grow:0,
+    vx:Math.cos(a+Math.PI)*0.4,vy:Math.sin(a+Math.PI)*0.4,
+    dir:1,animFrame:0,animTick:0,state:'chase',
+    wanderA:a,wanderT:60,dead:false,deadT:0,isFinalBoss:true});
+}
 function startGame(){
   gs='play';score=0;tick=0;lives=CHAR.lives;invTimer=0;
   P.x=WW/2;P.y=WH/2;P.size=1.0;P.vx=0;P.vy=0;P.animFrame=0;P.animTick=0;
+  stage=1;stageMsg='';stageMsgTimer=0;bossSpawned=false;finalBossId=-1;
   cam.x=P.x-W/2;cam.y=P.y-H/2;
   initWorld();
   document.getElementById('pauseBtn').style.display='block';
@@ -167,6 +179,7 @@ function update(){
       if(P.size>fi.size*0.88){fi.dead=true;fi.deadT=28;
         P.size=Math.min(30,P.size+fi.grow*CHAR.growMul);score+=fi.pts;
         spawnP(fi.x-cam.x,fi.y-cam.y,fi.col,14);
+        if(fi.isFinalBoss){setTimeout(()=>gameClear(),600);return;}
         const t=fi.tier;setTimeout(()=>spawnFish(t,{x:P.x,y:P.y}),2500+Math.random()*2000);
       }else if(invTimer===0&&fi.size>P.size*1.1)loseLife();
     }
@@ -178,6 +191,21 @@ function update(){
   particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy-=0.06;p.life--;p.a=p.life/p.ml;});
   particles=particles.filter(p=>p.life>0);
   if(tick%90===0)score+=Math.floor(P.size*0.5);
+
+  // ── 스테이지 진행
+  if(stage===1&&P.size>=7){
+    stage=2;stageMsg='STAGE 2 ─ 더 깊은 바다';stageMsgTimer=160;
+    for(let i=0;i<4;i++)spawnFish(2,{x:P.x,y:P.y});
+  }
+  if(stage===2&&P.size>=14){
+    stage=3;stageMsg='STAGE 3 ─ 심해 구역';stageMsgTimer=160;
+    for(let i=0;i<3;i++)spawnFish(3,{x:P.x,y:P.y});
+  }
+  if(stage===3&&P.size>=20){
+    stage=4;stageMsg='👑 대왕 상어 등장!';stageMsgTimer=200;bossSpawned=false;
+  }
+  if(stage===4&&!bossSpawned){bossSpawned=true;spawnBoss();}
+  if(stageMsgTimer>0)stageMsgTimer--;
 }
 
 function loseLife(){
@@ -190,6 +218,11 @@ function gameOver(){
   document.getElementById('pauseBtn').style.display='none';
   if(score>bestScore){bestScore=score;try{localStorage.setItem('dogFishBest',bestScore);}catch(e){}}
 }
+function gameClear(){
+  gs='clear';paused=false;goTick=tick;
+  document.getElementById('pauseBtn').style.display='none';
+  if(score>bestScore){bestScore=score;try{localStorage.setItem('dogFishBest',bestScore);}catch(e){}}
+}
 function spawnP(x,y,col,n){
   for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-1.5-Math.random()*3,
     life:22+Math.random()*16,ml:38,a:1,r:3+Math.random()*4,col});}
@@ -197,7 +230,9 @@ function spawnP(x,y,col,n){
 // ══ 배경 ══
 function drawBG(){
   const bg=ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#0a4878');bg.addColorStop(1,'#053858');
+  const bgCols=[['#0a4878','#053858'],['#064060','#032840'],['#020f22','#010810'],['#12002a','#080016']];
+  const bc=bgCols[Math.min(stage-1,3)];
+  bg.addColorStop(0,bc[0]);bg.addColorStop(1,bc[1]);
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   for(let i=0;i<5;i++){
     const rx=(i*180+fr*0.4-cam.x*0.04)%(W+120)-60;
@@ -272,6 +307,20 @@ function drawFish(){
     ctx.fillStyle='#000';ctx.beginPath();ctx.arc(r*0.52,-r*0.1,r*0.11,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();ctx.arc(r*0.55,-r*0.14,r*0.05,0,Math.PI*2);ctx.fill();
     if(fi.tier>=3){ctx.fillStyle='#fff';for(let t2=0;t2<3;t2++){ctx.beginPath();ctx.moveTo(r*(0.55+t2*0.12),r*0.08);ctx.lineTo(r*(0.5+t2*0.12),r*0.28);ctx.lineTo(r*(0.65+t2*0.12),r*0.08);ctx.fill();}}
+    if(fi.isFinalBoss){
+      // 왕관
+      ctx.fillStyle='#ffcc00';
+      ctx.beginPath();ctx.moveTo(-r*0.3,-r*0.62);ctx.lineTo(-r*0.5,-r*0.95);ctx.lineTo(-r*0.1,-r*0.7);
+      ctx.lineTo(0,-r*1.0);ctx.lineTo(r*0.1,-r*0.7);ctx.lineTo(r*0.5,-r*0.95);ctx.lineTo(r*0.3,-r*0.62);ctx.closePath();ctx.fill();
+      // 붉은 눈빛
+      ctx.fillStyle='#ff0000';ctx.beginPath();ctx.arc(r*0.52,-r*0.1,r*0.14,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,0,0,0.2)';ctx.beginPath();ctx.arc(r*0.52,-r*0.1,r*0.28,0,Math.PI*2);ctx.fill();
+      // 체력 바
+      const hpRatio=Math.max(0,1-(P.size-18)/12);
+      ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(-r,-r-14,r*2,8);
+      ctx.fillStyle=hpRatio>0.5?'#44ff44':hpRatio>0.25?'#ffcc00':'#ff2222';
+      ctx.fillRect(-r,-r-14,r*2*hpRatio,8);
+    }
     ctx.restore();
   });
 }
@@ -334,6 +383,21 @@ function drawHUD(){
   if(invTimer>0){ctx.fillStyle='rgba(255,220,0,0.2)';ctx.fillRect(W/2-55,H-24,110,7);
     ctx.fillStyle='rgba(255,220,0,0.88)';ctx.fillRect(W/2-55,H-24,110*(invTimer/160),7);
     ctx.fillStyle='#ffee88';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('무적',W/2,H-29);}
+  // 스테이지 표시
+  ctx.fillStyle='rgba(80,180,255,0.7)';ctx.font='bold 11px Orbitron,monospace';ctx.textAlign='left';
+  ctx.fillText(stage===4?'STAGE 4 ★FINAL':'STAGE '+stage,14,50+14);
+
+  // 스테이지 전환 메시지
+  if(stageMsgTimer>0){
+    const a=Math.min(1,stageMsgTimer/40)*Math.min(1,(stageMsgTimer)/40);
+    ctx.save();ctx.textAlign='center';
+    ctx.globalAlpha=a;
+    ctx.fillStyle=stage===4?'#ff8844':'#44ffcc';
+    ctx.font='bold 28px Orbitron,monospace';
+    ctx.shadowColor=stage===4?'#ff4400':'#00ffaa';ctx.shadowBlur=18;
+    ctx.fillText(stageMsg,W/2,H/2);ctx.shadowBlur=0;ctx.restore();
+  }
+
   if(tick<240){ctx.fillStyle='rgba(140,210,255,0.65)';ctx.font='11px Noto Sans KR,sans-serif';ctx.textAlign='center';
     ctx.fillText('마우스 드래그 or WASD  ·  초록=먹기 가능  ·  빨강=위험!',W/2,H-10);}
   ctx.textAlign='left';
@@ -401,6 +465,28 @@ function drawGameOver(){
   ctx.textAlign='left';
 }
 
+function drawClear(){
+  drawScene();
+  const a=Math.min(1,(tick-goTick)*0.035);
+  ctx.fillStyle=`rgba(0,5,15,${a*0.75})`;ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  // 무지개 글씨
+  const rg=ctx.createLinearGradient(W/2-120,0,W/2+120,0);
+  rg.addColorStop(0,'#ff8844');rg.addColorStop(0.5,'#ffdd00');rg.addColorStop(1,'#44ffcc');
+  ctx.fillStyle=rg;ctx.font='bold 52px Orbitron,monospace';
+  ctx.shadowColor='#ffaa00';ctx.shadowBlur=28;
+  ctx.fillText('CLEAR!',W/2,H/2-55);ctx.shadowBlur=0;
+  ctx.fillStyle=`rgba(255,255,180,${a})`;ctx.font='18px Noto Sans KR,sans-serif';
+  ctx.fillText('대왕 상어를 물리쳤어요! 🎉',W/2,H/2-8);
+  ctx.fillText('최종 점수: '+score,W/2,H/2+24);
+  if(score>=bestScore){
+    ctx.fillStyle=`rgba(255,220,0,${a})`;ctx.font='bold 14px Orbitron,monospace';
+    ctx.shadowColor='#ffaa00';ctx.shadowBlur=14;ctx.fillText('🏆 NEW RECORD!',W/2,H/2+54);ctx.shadowBlur=0;
+  }
+  ctx.fillStyle=`rgba(130,210,255,${a*0.8})`;ctx.font='13px Noto Sans KR,sans-serif';
+  ctx.fillText('클릭 또는 스페이스바로 재도전',W/2,H/2+86);
+  ctx.textAlign='left';
+}
 function togglePause(){
   if(gs!=='play')return;paused=!paused;
   document.getElementById('pauseBtn').textContent=paused?'▶':'⏸';
@@ -413,11 +499,12 @@ document.addEventListener('keydown',e=>{
   if(gs==='title'&&(e.code==='Space'||e.code==='Enter')){e.preventDefault();startGame();return;}
   if(gs==='play'&&!paused&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
   if(gs==='dead'&&(e.code==='Space'||e.code==='Enter')){e.preventDefault();gs='title';}
+  if(gs==='clear'&&(e.code==='Space'||e.code==='Enter')){e.preventDefault();gs='title';}
 });
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 cv.addEventListener('mousedown',e=>{
   if(gs==='title'){startGame();return;}
-  if(gs==='dead'){gs='title';return;}
+  if(gs==='dead'||gs==='clear'){gs='title';return;}
   if(gs==='play'&&!paused){const p=getPos(e.clientX,e.clientY);mouseX=p.x;mouseY=p.y;mouseActive=true;}
 });
 cv.addEventListener('mousemove',e=>{if(gs==='play'&&!paused&&e.buttons){const p=getPos(e.clientX,e.clientY);mouseX=p.x;mouseY=p.y;mouseActive=true;}});
@@ -437,6 +524,7 @@ function loop(){
   if(gs==='title')drawTitle();
   else if(gs==='play'){if(!paused)update();drawScene();}
   else if(gs==='dead'){tick++;drawGameOver();}
+  else if(gs==='clear'){tick++;drawClear();}
   requestAnimationFrame(loop);
 }
 try{bestScore=parseInt(localStorage.getItem('dogFishBest')||'0')||0;}catch(e){}
