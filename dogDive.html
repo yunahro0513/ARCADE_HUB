@@ -133,7 +133,7 @@ function update(){
   const tcy=Math.max(0,Math.min(WH-H,P.y-H/2));
   cam.x+=(tcx-cam.x)*0.1;cam.y+=(tcy-cam.y)*0.1;
 
-  const boostMul=speedBoostTimer>0?2.6:1.0;
+  const boostMul=speedBoostTimer>0?1.8:1.0;
   const baseSpd=(3.8+P.size*0.18)*CHAR.spdMul*boostMul;
   let ax=0,ay=0;
   if(mouseActive){const wx=mouseX+cam.x,wy=mouseY+cam.y,dx=wx-P.x,dy=wy-P.y,d=Math.sqrt(dx*dx+dy*dy);if(d>8){ax=dx/d;ay=dy/d;}}
